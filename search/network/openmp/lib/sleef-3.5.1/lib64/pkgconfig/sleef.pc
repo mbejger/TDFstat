@@ -1,0 +1,9 @@
+prefix=/work/chuck/pci/Soft_projects/TDFstat/search/network/openmp/lib/sleef-3.5.1
+libdir=/work/chuck/pci/Soft_projects/TDFstat/search/network/openmp/lib/sleef-3.5.1/lib64
+includedir=/work/chuck/pci/Soft_projects/TDFstat/search/network/openmp/lib/sleef-3.5.1/include
+
+Name: SLEEF
+Description: SIMD Library for Evaluating Elementary Functions, vectorized libm and DFT
+Version: 3.5.1
+Cflags: -I${includedir}
+Libs: -L${libdir} -lsleef
