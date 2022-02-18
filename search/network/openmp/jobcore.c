@@ -11,27 +11,43 @@
 #include <complex.h>
 #include <fftw3.h>
 #include <signal.h>
+#include <assert.h>
 
-/* JobCore file */
 #include "jobcore.h"
 #include "auxi.h"
 #include "settings.h"
 #include "timer.h"
 
-#include <assert.h>
 #if defined(SLEEF)
-//#include "sleef-2.80/purec/sleef.h"
-//#include <sleefsimd.h>
+
 #include <sleef.h>
-#define DORENAME
 #ifdef ENABLE_AVX
-#define CONFIG 1
-#include "helperavx.h"
-#include "renameavx.h"
-typedef Sleef___m256d_2 vdouble2;
+#define VLEN 4
+typedef __m256 vfloat;
+typedef __m256d vdouble;
 typedef Sleef___m256_2 vfloat2;
+typedef Sleef___m256d_2 vdouble2;
+static vdouble vload_vd_p(const double *ptr) { return _mm256_load_pd(ptr); }
+static vdouble vloadu_vd_p(const double *ptr) { return _mm256_loadu_pd(ptr); }
+static void vstore_v_p_vd(double *ptr, vdouble v) { _mm256_store_pd(ptr, v); }
+static void vstoreu_v_p_vd(double *ptr, vdouble v) { _mm256_storeu_pd(ptr, v); }
+#define v_sincos Sleef_sincosd4_u35
 #endif
+#ifdef ENABLE_AVX512
+#define VLEN 8
+typedef __m512 vfloat;
+typedef __m512d vdouble;
+typedef Sleef___m512_2 vfloat2;
+typedef Sleef___m512d_2 vdouble2;
+static vdouble vload_vd_p(const double *ptr) { return _mm512_load_pd(ptr); }
+static vdouble vloadu_vd_p(const double *ptr) { return _mm512_loadu_pd(ptr); }
+static void vstore_v_p_vd(double *ptr, vdouble v) { _mm512_store_pd(ptr, v); }
+static void vstoreu_v_p_vd(double *ptr, vdouble v) { _mm512_storeu_pd(ptr, v); }
+#define v_sincos Sleef_sincosd8_u35
+#endif
+
 #elif defined(YEPPP)
+
 #include <yepMath.h>
 #include <yepLibrary.h>
 
@@ -505,7 +521,8 @@ int job_core(int pm,                   // Hemisphere
     enum YepStatus status;
 #endif
 #ifdef SLEEF
-    double _p[VECTLENDP], _c[VECTLENDP];
+    double _p[VLEN] __attribute__((aligned(64))),
+           _c[VLEN] __attribute__((aligned(64)));
     vdouble2 v;
     vdouble a;
 #endif
@@ -517,7 +534,7 @@ int job_core(int pm,                   // Hemisphere
     /* Spindown loop  */
 
     //#pragma omp for schedule(static,4)
-#pragma omp for schedule(static,4)
+#pragma omp for schedule(static,1)
     for(ss=smin; ss<=smax; ss += s_stride) {
 
 #if TIMERS>2
@@ -544,22 +561,96 @@ int job_core(int pm,                   // Hemisphere
 
 #if defined(SLEEF)
       // use simd sincos from the SLEEF library;
-      // VECTLENDP is a simd vector length defined in the SLEEF library
-      // and it depends on selected instruction set e.g. -DENABLE_AVX
-      for(i=0; i<sett->N; i+=VECTLENDP) {
-	for(j=0; j<VECTLENDP; j++)
+      // best available extension is used (autodispatching)
+      for(i=0; i<sett->N; i+=VLEN) {
+	  
+	for(j=0; j<VLEN; j++){
 	  _p[j] =  het1*(i+j) + sgnlt[1]*_tmp1[0][i+j];
-	
-	a = vloadu_vd_p(_p);
-	v = xsincos_u1(a);
-	vstoreu_v_p_vd(_p, v.x); // reuse _p for sin
-	vstoreu_v_p_vd(_c, v.y);
-	
-	for(j=0; j<VECTLENDP; ++j){
-	  exph = _c[j] - I*_p[j];
-	  fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph; //ifo[0].sig.sig2;
-	  fxb[i+j] = ifo[0].sig.xDatmb[i+j]*exph; //ifo[0].sig.sig2;
+	  //printf(" %20.16lf ", _p[j]);
 	}
+	//printf("\n");
+	a = vload_vd_p(_p);
+	v = v_sincos(a);
+#if 1
+	/* exph = _c[j] - I*_p[j];
+	   fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
+	*/
+	__m256d mare = _mm256_setr_pd( creal(ifo[0].sig.xDatma[i]),
+				       creal(ifo[0].sig.xDatma[i+1]),
+				       creal(ifo[0].sig.xDatma[i+2]),
+				       creal(ifo[0].sig.xDatma[i+3]) );
+	__m256d maim = _mm256_setr_pd( cimag(ifo[0].sig.xDatma[i]),
+				       cimag(ifo[0].sig.xDatma[i+1]),
+				       cimag(ifo[0].sig.xDatma[i+2]),
+				       cimag(ifo[0].sig.xDatma[i+3]) );
+	__m256d vec1, vre, vim;
+	vec1 = _mm256_mul_pd(mare, v.y);
+	vre = _mm256_fmadd_pd(maim, v.x, vec1);
+	//printf("fxa_re[] = %20.16lf\n", ((double *)&vre)[1] );
+	vec1 = _mm256_mul_pd(mare, v.x);
+	vim = _mm256_fmsub_pd(maim, v.y, vec1);
+	//printf("fxa_im[] = %20.16lf\n", ((double *)&vim)[1] );
+	for(j=0; j<VLEN; ++j)
+	  fxa[i+j] = ((double *)&vre)[j] + I*((double *)&vim)[j];
+
+	mare = _mm256_setr_pd( creal(ifo[0].sig.xDatmb[i]),
+			       creal(ifo[0].sig.xDatmb[i+1]),
+			       creal(ifo[0].sig.xDatmb[i+2]),
+			       creal(ifo[0].sig.xDatmb[i+3]) );
+	maim = _mm256_setr_pd( cimag(ifo[0].sig.xDatmb[i]),
+			       cimag(ifo[0].sig.xDatmb[i+1]),
+			       cimag(ifo[0].sig.xDatmb[i+2]),
+			       cimag(ifo[0].sig.xDatmb[i+3]) );
+	vec1 = _mm256_mul_pd(mare, v.y);
+	vre = _mm256_fmadd_pd(maim, v.x, vec1);
+	vec1 = _mm256_mul_pd(mare, v.x);
+	vim = _mm256_fmsub_pd(maim, v.y, vec1);
+	for(j=0; j<VLEN; ++j)
+	  fxb[i+j] = ((double *)&vre)[j] + I*((double *)&vim)[j];
+#else
+	vstore_v_p_vd(_p, v.x); // reuse _p for sin
+	vstore_v_p_vd(_c, v.y);
+	
+	for(j=0; j<VLEN; ++j){
+	  exph = _c[j] - I*_p[j];
+	  fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
+	  fxb[i+j] = ifo[0].sig.xDatmb[i+j]*exph;
+	}
+#endif
+	
+#if 0
+	vstore_v_p_vd(_p, v.x); // reuse _p for sin
+	vstore_v_p_vd(_c, v.y);
+	
+	printf(" %20.16lf \n", ((double *)&v.x)[1]);
+	  
+	for(j=0; j<VLEN; ++j){
+	  exph = _c[j] - I*_p[j];
+	  fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
+	  fxb[i+j] = ifo[0].sig.xDatmb[i+j]*exph;
+	  printf(" c=%20.16lf p=%20.16lf fxa=(%20.16lf , %20.16lf)\n", _c[j], _p[j], creal(fxa[i+j]), cimag(fxa[i+j]) );
+	}
+	printf("\n");
+	
+	
+	complex double *ma = &ifo[0].sig.xDatma[i];
+	complex double *mb = &ifo[0].sig.xDatmb[i];
+	
+	double *vx = (double *)&v.x;
+	double *vy = (double *)&v.y;
+
+	for(j=0; j<VLEN; ++j){
+	  exph = _c[j] - I*_p[j];
+	  //fxa[i+j] = ma[j]*_c[j] - I*ma[j]*_p[j];
+	  fxa[i+j] = (creal(ma[j])*vy[j] + cimag(ma[j])*vx[j]) +
+	           I*(cimag(ma[j])*vy[j] - creal(ma[j])*vx[j]);
+	  printf(">c=%20.16lf p=%20.16lf fxa=(%20.16lf , %20.16lf)\n",
+		 _c[j], _p[j], creal(fxa[i+j]), cimag(fxa[i+j]) );		  
+	  fxb[i+j] = mb[j]*exph;
+	}
+	
+	exit(0);
+#endif
       } 
 #elif defined(YEPPP)
       // use yeppp! library;
@@ -623,22 +714,58 @@ int job_core(int pm,                   // Hemisphere
       for(n=1; n<sett->nifo; ++n) {
 #if defined(SLEEF)
 	// use simd sincos from the SLEEF library;
-	// VECTLENDP is a simd vector length defined in the SLEEF library
-	// and it depends on selected instruction set e.g. -DENABLE_AVX
-	for (i=0; i<sett->N; i+=VECTLENDP) {
-	  for(j=0; j<VECTLENDP; j++)
+	for (i=0; i<sett->N; i+=VLEN) {
+	  for(j=0; j<VLEN; j++)
 	    _p[j] =  het1*(i+j) + sgnlt[1]*_tmp1[n][i+j];
 	  
-	  a = vloadu_vd_p(_p);
-	  v = xsincos_u1(a);
-	  vstoreu_v_p_vd(_p, v.x); // reuse _p for sin
-	  vstoreu_v_p_vd(_c, v.y);
-	
-	  for(j=0; j<VECTLENDP; ++j){
+	  a = vload_vd_p(_p);
+	  v = v_sincos(a);
+#if 1 
+	  /* exph = _c[j] - I*_p[j];
+	     fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
+	  */
+	  __m256d mare = _mm256_setr_pd( creal(ifo[n].sig.xDatma[i]),
+					 creal(ifo[n].sig.xDatma[i+1]),
+					 creal(ifo[n].sig.xDatma[i+2]),
+					 creal(ifo[n].sig.xDatma[i+3]) );
+	  __m256d maim = _mm256_setr_pd( cimag(ifo[n].sig.xDatma[i]),
+					 cimag(ifo[n].sig.xDatma[i+1]),
+					 cimag(ifo[n].sig.xDatma[i+2]),
+					 cimag(ifo[n].sig.xDatma[i+3]) );
+	  __m256d vec1, vre, vim;
+	  vec1 = _mm256_mul_pd(mare, v.y);
+	  vre = _mm256_fmadd_pd(maim, v.x, vec1);
+	  //printf("fxa_re[] = %20.16lf\n", ((double *)&vre)[1] );
+	  vec1 = _mm256_mul_pd(mare, v.x);
+	  vim = _mm256_fmsub_pd(maim, v.y, vec1);
+	  //printf("fxa_im[] = %20.16lf\n", ((double *)&vim)[1] );
+	  for(j=0; j<VLEN; ++j)
+	    fxa[i+j] += ((double *)&vre)[j] + I*((double *)&vim)[j];
+
+	  mare = _mm256_setr_pd( creal(ifo[n].sig.xDatmb[i]),
+				 creal(ifo[n].sig.xDatmb[i+1]),
+				 creal(ifo[n].sig.xDatmb[i+2]),
+				 creal(ifo[n].sig.xDatmb[i+3]) );
+	  maim = _mm256_setr_pd( cimag(ifo[n].sig.xDatmb[i]),
+				 cimag(ifo[n].sig.xDatmb[i+1]),
+				 cimag(ifo[n].sig.xDatmb[i+2]),
+				 cimag(ifo[n].sig.xDatmb[i+3]) );
+	  vec1 = _mm256_mul_pd(mare, v.y);
+	  vre = _mm256_fmadd_pd(maim, v.x, vec1);
+	  vec1 = _mm256_mul_pd(mare, v.x);
+	  vim = _mm256_fmsub_pd(maim, v.y, vec1);
+	  for(j=0; j<VLEN; ++j)
+	    fxb[i+j] += ((double *)&vre)[j] + I*((double *)&vim)[j];
+#else
+	  vstore_v_p_vd(_p, v.x); // reuse _p for sin
+	  vstore_v_p_vd(_c, v.y);
+	  
+	  for(j=0; j<VLEN; ++j){
 	    exph = _c[j] - I*_p[j];
 	    fxa[i+j] += ifo[n].sig.xDatma[i+j]*exph;
 	    fxb[i+j] += ifo[n].sig.xDatmb[i+j]*exph;
 	  }
+#endif	  
 	} 
 #elif defined(YEPPP)
 	// use yeppp! library;
