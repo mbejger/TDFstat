@@ -1,5 +1,3 @@
-This directory contains external libraries we use for vectorization:
+External libraries:
 
-SLEEF by Naoki Shibata: http://shibatch.sourceforge.net/
-
-Yeppp! : http://www.yeppp.info/
+* SLEEF Vectorized Math Library by Naoki Shibata ( https://sleef.org )
