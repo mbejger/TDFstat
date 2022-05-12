@@ -12,48 +12,13 @@
 #include <fftw3.h>
 #include <signal.h>
 #include <assert.h>
+#include <omp.h>
 
 #include "jobcore.h"
 #include "auxi.h"
 #include "settings.h"
 #include "timer.h"
 
-#if defined(SLEEF)
-
-#include <sleef.h>
-#ifdef ENABLE_AVX
-#define VLEN 4
-typedef __m256 vfloat;
-typedef __m256d vdouble;
-typedef Sleef___m256_2 vfloat2;
-typedef Sleef___m256d_2 vdouble2;
-static vdouble vload_vd_p(const double *ptr) { return _mm256_load_pd(ptr); }
-static vdouble vloadu_vd_p(const double *ptr) { return _mm256_loadu_pd(ptr); }
-static void vstore_v_p_vd(double *ptr, vdouble v) { _mm256_store_pd(ptr, v); }
-static void vstoreu_v_p_vd(double *ptr, vdouble v) { _mm256_storeu_pd(ptr, v); }
-#define v_sincos Sleef_sincosd4_u35
-#endif
-#ifdef ENABLE_AVX512
-#define VLEN 8
-typedef __m512 vfloat;
-typedef __m512d vdouble;
-typedef Sleef___m512_2 vfloat2;
-typedef Sleef___m512d_2 vdouble2;
-static vdouble vload_vd_p(const double *ptr) { return _mm512_load_pd(ptr); }
-static vdouble vloadu_vd_p(const double *ptr) { return _mm512_loadu_pd(ptr); }
-static void vstore_v_p_vd(double *ptr, vdouble v) { _mm512_store_pd(ptr, v); }
-static void vstoreu_v_p_vd(double *ptr, vdouble v) { _mm512_storeu_pd(ptr, v); }
-#define v_sincos Sleef_sincosd8_u35
-#endif
-
-#elif defined(YEPPP)
-
-#include <yepMath.h>
-#include <yepLibrary.h>
-
-#endif
-
-#include <omp.h>
 
 extern volatile sig_atomic_t save_state;
 
@@ -96,11 +61,6 @@ void search(
   char outname[1100];
   int fd, status;
   FILE *state;
-
-#ifdef YEPPP
-  status = yepLibrary_Init();
-  assert(status == YepStatusOk);
-#endif
 
 #ifdef TIMERS
   struct timespec tstart = get_current_time(CLOCK_REALTIME), tend;
@@ -244,21 +204,13 @@ int job_core(int pm,                   // Hemisphere
   int smin = s_range->sst, smax = s_range->spndr[1];
   double al1, al2, sinalt, cosalt, sindelt, cosdelt, sgnlt[NPAR], 
     nSource[3], het0, sgnl0, ft;
-  //double _tmp1[sett->nifo][sett->N];
+  double _tmp1[sett->nifo][sett->N] __attribute__((aligned(128)));
+  /*
   static double **_tmp1;
   if (!_tmp1) {
     _tmp1 = (double **)malloc(sett->nifo*sizeof(double *));
     for (n=0; n < sett->nifo; n++) _tmp1[n] = (double *)calloc(sett->N, sizeof(double));
-  }
-#undef NORMTOMAX
-#ifdef NORMTOMAX
-  double blkavg, threshold = 6.;
-  int imax, imax0, iblk, blkstart, ihi;
-  int blksize = 1024;
-  int nfft = sett->nmax - sett->nmin;
-  static int *Fmax;
-  if (!Fmax) Fmax = (int *) malloc(nfft*sizeof(int));
-#endif
+    }*/
 
   struct timespec tstart, tend;
   double spindown_timer = 0;
@@ -336,10 +288,10 @@ int job_core(int pm,                   // Hemisphere
           + nSource[1]*ifo[n].sig.DetSSB[1]
           + nSource[2]*ifo[n].sig.DetSSB[2];
 
-#define CHUNK 4
+#define CHUNK 64
 #pragma omp parallel default(shared) private(phase,cp,sp,exph)
     {
-#pragma omp for schedule(static,CHUNK)
+#pragma omp for schedule(static)
       for(i=0; i<sett->N; ++i) {
 	ifo[n].sig.shft[i] = nSource[0]*ifo[n].sig.DetSSB[i*3]
 	                   + nSource[1]*ifo[n].sig.DetSSB[i*3+1]
@@ -348,7 +300,7 @@ int job_core(int pm,                   // Hemisphere
 	_tmp1[n][i] = aux->t2[i] + (double)(2*i)*ifo[n].sig.shft[i];
       }
 
-#pragma omp for schedule(static,CHUNK) 
+#pragma omp for schedule(static)
       for(i=0; i<sett->N; ++i) {
 	// Phase modulation 
 	phase = het0*i + sett->oms*ifo[n].sig.shft[i];
@@ -370,7 +322,7 @@ int job_core(int pm,                   // Hemisphere
       /* Resampling using spline interpolation:
        * This will double the sampling rate 
        */ 
-#pragma omp for schedule(static,CHUNK)  
+#pragma omp for schedule(static)
       for(i=0; i < sett->N; ++i) {
 	fftw_arr->xa[i] = ifo[n].sig.xDatma[i];
 	fftw_arr->xb[i] = ifo[n].sig.xDatmb[i];
@@ -378,7 +330,7 @@ int job_core(int pm,                   // Hemisphere
 
       // Zero-padding (filling with 0s up to sett->nfft, 
       // the nearest power of 2)
-#pragma omp for schedule(static,CHUNK)
+#pragma omp for schedule(static)
       for (i=sett->N; i<sett->nfft; ++i) {
 	   fftw_arr->xa[i] = 0.;
 	   fftw_arr->xb[i] = 0.;
@@ -399,16 +351,17 @@ int job_core(int pm,                   // Hemisphere
 
     for(i=nyqst + sett->Ninterp - sett->nfft, j=nyqst; i<sett->Ninterp; ++i, ++j)
 	 fftw_arr->xa[i] = fftw_arr->xa[j];
-
+#pragma omp parallel for schedule(static) default(shared)
     for(i=nyqst; i<nyqst + sett->Ninterp - sett->nfft; ++i)
-	 fftw_arr->xa[i] = 0.;
-    
+      fftw_arr->xa[i] = 0.;
+
     for(i=nyqst + sett->Ninterp - sett->nfft, j=nyqst; i<sett->Ninterp; ++i, ++j)
-	 fftw_arr->xb[i] = fftw_arr->xb[j];
-
+	 fftw_arr->xb[i] = fftw_arr->xb[j];    
+#pragma omp parallel for schedule(static) default(shared)
     for(i=nyqst; i<nyqst + sett->Ninterp - sett->nfft; ++i)
-	 fftw_arr->xb[i] = 0.;
+      fftw_arr->xb[i] = 0.;
 
+    
     // Backward fft (len Ninterp = nfft*interpftpad)
     fftw_execute_dft(plans->pl_inv,fftw_arr->xa,fftw_arr->xa);
     fftw_execute_dft(plans->pl_inv,fftw_arr->xb,fftw_arr->xb);
@@ -467,10 +420,6 @@ int job_core(int pm,                   // Hemisphere
     bb += bbtemp/ifo[n].sig.sig2;   
   }
 
-#ifdef YEPPP
-#define VLEN 1024
-  int bnd = (sett->N/VLEN)*VLEN;
-#endif
 
   // Check if the signal is added to the data 
   // or the range file is given:  
@@ -487,8 +436,8 @@ int job_core(int pm,                   // Hemisphere
       if(smin > smax) { 
     
         smin = smin + smax ;
-        smax = smin - smax ; 
-        smin = smin - smax ; 
+        smax = smin - smax ;
+        smin = smin - smax ;
 
       }
   } 
@@ -502,50 +451,30 @@ int job_core(int pm,                   // Hemisphere
 
   static fftw_complex *fxa, *fxb;
   static double *F;
-#pragma omp threadprivate(fxa,fxb, F)
-#pragma omp threadprivate(F)
-
+  
+  if (!fxa) fxa = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
+  if (!fxb) fxb = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
+  if (!F) F = (double *)malloc(2*sett->nfft*sizeof(double));
+  
   //private loop counter: ss
   //private (declared inside): ii,Fc,het1,k,veto_status,a,v,_p,_c,_s,status
   //shared default: nn,mm,sett,_tmp1,ifo,het0,bnd,plans,opts,aa,bb,
   //                fftw_arr (zostawiamy i robimy nowe), FNum (atomic!)
   //we use shared plans and  fftw_execute with 'new-array' interface
-#pragma omp parallel default(shared)				\
-  private(i, j, n, sgnl0, exph, phase, cp, sp, tstart, tend)	\
-  firstprivate(sgnlt)						\
-  reduction(+ : spindown_timer, spindown_counter)
 
-  {
-#ifdef YEPPP
-    Yep64f _p[VLEN], _s[VLEN], _c[VLEN];
-    enum YepStatus status;
-#endif
-#ifdef SLEEF
-    double _p[VLEN] __attribute__((aligned(64))),
-           _c[VLEN] __attribute__((aligned(64)));
-    vdouble2 v;
-    vdouble a;
-#endif
     
-    if (!fxa) fxa = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
-    if (!fxb) fxb = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
-    if (!F) F = (double *)calloc(2*sett->nfft, sizeof(double));
-  
     /* Spindown loop  */
 
-    //#pragma omp for schedule(static,4)
-#pragma omp for schedule(static,1)
     for(ss=smin; ss<=smax; ss += s_stride) {
 
 #if TIMERS>2
       tstart = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
 #endif 
-
+      
       // Spindown parameter
       sgnlt[1] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
 
-      int ii;
-      double Fc, het1;
+      double het1;
       
 #ifdef VERBOSE
       //print a 'dot' every new spindown
@@ -557,297 +486,24 @@ int job_core(int pm,                   // Hemisphere
 
       sgnl0 = het0 + het1;
 
-      // phase modulation before fft
+      spindown_modulation(sett->nifo, sett->N, het1, sgnlt, _tmp1, fxa, fxb);
 
-#if defined(SLEEF)
-      // use simd sincos from the SLEEF library;
-      // best available extension is used (autodispatching)
-      for(i=0; i<sett->N; i+=VLEN) {
-	  
-	for(j=0; j<VLEN; j++){
-	  _p[j] =  het1*(i+j) + sgnlt[1]*_tmp1[0][i+j];
-	  //printf(" %20.16lf ", _p[j]);
-	}
-	//printf("\n");
-	a = vload_vd_p(_p);
-	v = v_sincos(a);
-#if 1
-	/* exph = _c[j] - I*_p[j];
-	   fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-	*/
-	__m256d mare = _mm256_setr_pd( creal(ifo[0].sig.xDatma[i]),
-				       creal(ifo[0].sig.xDatma[i+1]),
-				       creal(ifo[0].sig.xDatma[i+2]),
-				       creal(ifo[0].sig.xDatma[i+3]) );
-	__m256d maim = _mm256_setr_pd( cimag(ifo[0].sig.xDatma[i]),
-				       cimag(ifo[0].sig.xDatma[i+1]),
-				       cimag(ifo[0].sig.xDatma[i+2]),
-				       cimag(ifo[0].sig.xDatma[i+3]) );
-	__m256d vec1, vre, vim;
-	vec1 = _mm256_mul_pd(mare, v.y);
-	vre = _mm256_fmadd_pd(maim, v.x, vec1);
-	//printf("fxa_re[] = %20.16lf\n", ((double *)&vre)[1] );
-	vec1 = _mm256_mul_pd(mare, v.x);
-	vim = _mm256_fmsub_pd(maim, v.y, vec1);
-	//printf("fxa_im[] = %20.16lf\n", ((double *)&vim)[1] );
-	for(j=0; j<VLEN; ++j)
-	  fxa[i+j] = ((double *)&vre)[j] + I*((double *)&vim)[j];
-
-	mare = _mm256_setr_pd( creal(ifo[0].sig.xDatmb[i]),
-			       creal(ifo[0].sig.xDatmb[i+1]),
-			       creal(ifo[0].sig.xDatmb[i+2]),
-			       creal(ifo[0].sig.xDatmb[i+3]) );
-	maim = _mm256_setr_pd( cimag(ifo[0].sig.xDatmb[i]),
-			       cimag(ifo[0].sig.xDatmb[i+1]),
-			       cimag(ifo[0].sig.xDatmb[i+2]),
-			       cimag(ifo[0].sig.xDatmb[i+3]) );
-	vec1 = _mm256_mul_pd(mare, v.y);
-	vre = _mm256_fmadd_pd(maim, v.x, vec1);
-	vec1 = _mm256_mul_pd(mare, v.x);
-	vim = _mm256_fmsub_pd(maim, v.y, vec1);
-	for(j=0; j<VLEN; ++j)
-	  fxb[i+j] = ((double *)&vre)[j] + I*((double *)&vim)[j];
-#else
-	vstore_v_p_vd(_p, v.x); // reuse _p for sin
-	vstore_v_p_vd(_c, v.y);
-	
-	for(j=0; j<VLEN; ++j){
-	  exph = _c[j] - I*_p[j];
-	  fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-	  fxb[i+j] = ifo[0].sig.xDatmb[i+j]*exph;
-	}
-#endif
-	
-#if 0
-	vstore_v_p_vd(_p, v.x); // reuse _p for sin
-	vstore_v_p_vd(_c, v.y);
-	
-	printf(" %20.16lf \n", ((double *)&v.x)[1]);
-	  
-	for(j=0; j<VLEN; ++j){
-	  exph = _c[j] - I*_p[j];
-	  fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-	  fxb[i+j] = ifo[0].sig.xDatmb[i+j]*exph;
-	  printf(" c=%20.16lf p=%20.16lf fxa=(%20.16lf , %20.16lf)\n", _c[j], _p[j], creal(fxa[i+j]), cimag(fxa[i+j]) );
-	}
-	printf("\n");
-	
-	
-	complex double *ma = &ifo[0].sig.xDatma[i];
-	complex double *mb = &ifo[0].sig.xDatmb[i];
-	
-	double *vx = (double *)&v.x;
-	double *vy = (double *)&v.y;
-
-	for(j=0; j<VLEN; ++j){
-	  exph = _c[j] - I*_p[j];
-	  //fxa[i+j] = ma[j]*_c[j] - I*ma[j]*_p[j];
-	  fxa[i+j] = (creal(ma[j])*vy[j] + cimag(ma[j])*vx[j]) +
-	           I*(cimag(ma[j])*vy[j] - creal(ma[j])*vx[j]);
-	  printf(">c=%20.16lf p=%20.16lf fxa=(%20.16lf , %20.16lf)\n",
-		 _c[j], _p[j], creal(fxa[i+j]), cimag(fxa[i+j]) );		  
-	  fxb[i+j] = mb[j]*exph;
-	}
-	
-	exit(0);
-#endif
-      } 
-#elif defined(YEPPP)
-      // use yeppp! library;
-      // VLEN is length of vector to be processed
-      // for caches L1/L2 64/256kb optimal value is ~2048
-      for (j=0; j<bnd; j+=VLEN) {
-	//double *_tmp2 = &_tmp1[0][j];
-	for (i=0; i<VLEN; ++i)
-	  //_p[i] =  het1*(i+j) + sgnlt[1]*_tmp2[i];
-       	  _p[i] =  het1*(i+j) + sgnlt[1]*_tmp1[0][i+j];
-	
-	status = yepMath_Sin_V64f_V64f(_p, _s, VLEN);
-	assert(status == YepStatusOk);
-	status = yepMath_Cos_V64f_V64f(_p, _c, VLEN);
-	assert(status == YepStatusOk);
-
-	for (i=0; i<VLEN; ++i) {
-	  //	  exph = _c[i] - I*_s[i];
-	  fxa[i+j] = ifo[0].sig.xDatma[i+j]*_c[i]-I*ifo[0].sig.xDatma[i+j]*_s[i];
-	  fxb[i+j] = ifo[0].sig.xDatmb[i+j]*_c[i]-I*ifo[0].sig.xDatmb[i+j]*_s[i];
-	}
-      }
-      // remaining part is shorter than VLEN - no need to vectorize
-      for (i=0; i<sett->N-bnd; ++i){
-	j = bnd + i;
-	_p[i] =  het1*j + sgnlt[1]*_tmp1[0][j];
-      }
-
-      status = yepMath_Sin_V64f_V64f(_p, _s, sett->N-bnd);
-      assert(status == YepStatusOk);
-      status = yepMath_Cos_V64f_V64f(_p, _c, sett->N-bnd);
-      assert(status == YepStatusOk);
-
-      for (i=0; i<sett->N-bnd; ++i) {
-	j = bnd + i;
-	//exph = _c[i] - I*_s[i];
-	//fxa[j] = ifo[0].sig.xDatma[j]*exph;
-	//fxb[j] = ifo[0].sig.xDatmb[j]*exph;
-	fxa[j] = ifo[0].sig.xDatma[j]*_c[i]-I*ifo[0].sig.xDatma[j]*_s[i];
-	fxb[j] = ifo[0].sig.xDatmb[j]*_c[i]-I*ifo[0].sig.xDatmb[j]*_s[i];
-      }
-#elif defined(GNUSINCOS)
-      for(i=sett->N-1; i!=-1; --i) {
-        phase = het1*i + sgnlt[1]*_tmp1[0][i];
-	sincos(phase, &sp, &cp);
-	exph = cp - I*sp;
-        fxa[i] = ifo[0].sig.xDatma[i]*exph; //ifo[0].sig.sig2;
-        fxb[i] = ifo[0].sig.xDatmb[i]*exph; //ifo[0].sig.sig2;
-      }
-#else
-      for(i=sett->N-1; i!=-1; --i) {
-        phase = het1*i + sgnlt[1]*_tmp1[0][i];
-	cp = cos(phase);
-      	sp = sin(phase);
-	exph = cp - I*sp;
-        fxa[i] = ifo[0].sig.xDatma[i]*exph; //ifo[0].sig.sig2;
-        fxb[i] = ifo[0].sig.xDatmb[i]*exph; //ifo[0].sig.sig2;
-      }
-#endif
-
-      for(n=1; n<sett->nifo; ++n) {
-#if defined(SLEEF)
-	// use simd sincos from the SLEEF library;
-	for (i=0; i<sett->N; i+=VLEN) {
-	  for(j=0; j<VLEN; j++)
-	    _p[j] =  het1*(i+j) + sgnlt[1]*_tmp1[n][i+j];
-	  
-	  a = vload_vd_p(_p);
-	  v = v_sincos(a);
-#if 1 
-	  /* exph = _c[j] - I*_p[j];
-	     fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-	  */
-	  __m256d mare = _mm256_setr_pd( creal(ifo[n].sig.xDatma[i]),
-					 creal(ifo[n].sig.xDatma[i+1]),
-					 creal(ifo[n].sig.xDatma[i+2]),
-					 creal(ifo[n].sig.xDatma[i+3]) );
-	  __m256d maim = _mm256_setr_pd( cimag(ifo[n].sig.xDatma[i]),
-					 cimag(ifo[n].sig.xDatma[i+1]),
-					 cimag(ifo[n].sig.xDatma[i+2]),
-					 cimag(ifo[n].sig.xDatma[i+3]) );
-	  __m256d vec1, vre, vim;
-	  vec1 = _mm256_mul_pd(mare, v.y);
-	  vre = _mm256_fmadd_pd(maim, v.x, vec1);
-	  //printf("fxa_re[] = %20.16lf\n", ((double *)&vre)[1] );
-	  vec1 = _mm256_mul_pd(mare, v.x);
-	  vim = _mm256_fmsub_pd(maim, v.y, vec1);
-	  //printf("fxa_im[] = %20.16lf\n", ((double *)&vim)[1] );
-	  for(j=0; j<VLEN; ++j)
-	    fxa[i+j] += ((double *)&vre)[j] + I*((double *)&vim)[j];
-
-	  mare = _mm256_setr_pd( creal(ifo[n].sig.xDatmb[i]),
-				 creal(ifo[n].sig.xDatmb[i+1]),
-				 creal(ifo[n].sig.xDatmb[i+2]),
-				 creal(ifo[n].sig.xDatmb[i+3]) );
-	  maim = _mm256_setr_pd( cimag(ifo[n].sig.xDatmb[i]),
-				 cimag(ifo[n].sig.xDatmb[i+1]),
-				 cimag(ifo[n].sig.xDatmb[i+2]),
-				 cimag(ifo[n].sig.xDatmb[i+3]) );
-	  vec1 = _mm256_mul_pd(mare, v.y);
-	  vre = _mm256_fmadd_pd(maim, v.x, vec1);
-	  vec1 = _mm256_mul_pd(mare, v.x);
-	  vim = _mm256_fmsub_pd(maim, v.y, vec1);
-	  for(j=0; j<VLEN; ++j)
-	    fxb[i+j] += ((double *)&vre)[j] + I*((double *)&vim)[j];
-#else
-	  vstore_v_p_vd(_p, v.x); // reuse _p for sin
-	  vstore_v_p_vd(_c, v.y);
-	  
-	  for(j=0; j<VLEN; ++j){
-	    exph = _c[j] - I*_p[j];
-	    fxa[i+j] += ifo[n].sig.xDatma[i+j]*exph;
-	    fxb[i+j] += ifo[n].sig.xDatmb[i+j]*exph;
-	  }
-#endif	  
-	} 
-#elif defined(YEPPP)
-	// use yeppp! library;
-	// VLEN is length of vector to be processed
-	// for caches L1/L2 64/256kb optimal value is ~2048
-	for (j=0; j<bnd; j+=VLEN) {
-	  //double *_tmp2 = &_tmp1[n][j];
-	  for (i=0; i<VLEN; ++i)
-	    //  _p[i] =  het1*(i+j) + sgnlt[1]*_tmp2[i];
-	    _p[i] =  het1*(j+i) + sgnlt[1]*_tmp1[n][j+i];
-	
-	  status = yepMath_Sin_V64f_V64f(_p, _s, VLEN);
-	  assert(status == YepStatusOk);
-	  status = yepMath_Cos_V64f_V64f(_p, _c, VLEN);
-	  assert(status == YepStatusOk);
-	
-	  for (i=0; i<VLEN; ++i) {
-	    //exph = _c[i] - I*_s[i];
-	    //fxa[j+i] += ifo[n].sig.xDatma[j+i]*exph;
-	    //fxb[j+i] += ifo[n].sig.xDatmb[j+i]*exph;
-	    fxa[i+j] += ifo[n].sig.xDatma[i+j]*_c[i]-I*ifo[n].sig.xDatma[i+j]*_s[i];
-	    fxb[i+j] += ifo[n].sig.xDatmb[i+j]*_c[i]-I*ifo[n].sig.xDatmb[i+j]*_s[i];
-	  }
-	}
-	// remaining part is shorter than VLEN - no need to vectorize
-	for (i=0; i<sett->N-bnd; ++i){
-	  j = bnd + i;
-	  _p[i] =  het1*j + sgnlt[1]*_tmp1[n][j];
-	}
-
-	status = yepMath_Sin_V64f_V64f(_p, _s, sett->N-bnd);
-	assert(status == YepStatusOk);
-	status = yepMath_Cos_V64f_V64f(_p, _c, sett->N-bnd);
-	assert(status == YepStatusOk);
-
-	for (i=0; i<sett->N-bnd; ++i) {
-	  j = bnd + i;
-	  //exph = _c[i] - I*_s[i];
-	  //fxa[j] += ifo[n].sig.xDatma[j]*exph;
-	  //fxb[j] += ifo[n].sig.xDatmb[j]*exph;
-	  fxa[j] += ifo[n].sig.xDatma[j]*_c[i]-I*ifo[n].sig.xDatma[j]*_s[i];
-	  fxb[j] += ifo[n].sig.xDatmb[j]*_c[i]-I*ifo[n].sig.xDatmb[j]*_s[i];
-	}
-
-#elif defined(GNUSINCOS)
-	for(i=sett->N-1; i!=-1; --i) {
-	  phase = het1*i + sgnlt[1]*_tmp1[n][i];
-	  sincos(phase, &sp, &cp);
-	  exph = cp - I*sp;
-	  fxa[i] += ifo[n].sig.xDatma[i]*exph;
-	  fxb[i] += ifo[n].sig.xDatmb[i]*exph;
-	}
-#else
-	for(i=sett->N-1; i!=-1; --i) {
-	  phase = het1*i + sgnlt[1]*_tmp1[n][i];
-	  cp = cos(phase);
-	  sp = sin(phase);
-	  exph = cp - I*sp;
-	  fxa[i] += ifo[n].sig.xDatma[i]*exph;
-	  fxb[i] += ifo[n].sig.xDatmb[i]*exph;
-	}
-#endif
-
-      } 
-
-      // Zero-padding 
+      // Zero-padding
+#pragma omp parallel for schedule(static) shared(fxa, fxb)
       for(i = sett->fftpad*sett->nfft-1; i != sett->N-1; --i)
-	fxa[i] = fxb[i] = 0.; 
+	fxa[i] = fxb[i] = 0.;
 
       fftw_execute_dft(plans->plan, fxa, fxa);
       fftw_execute_dft(plans->plan, fxb, fxb);
-      
-      // Computing F-statistic 
-      for (i=sett->nmin; i<sett->nmax; i++) {
+
+      // Computing F-statistic
+#pragma omp parallel for schedule(static) default(shared)
+      for (i=sett->nmin; i<sett->nmax; ++i) {
 	F[i] = (sqr(creal(fxa[i])) + sqr(cimag(fxa[i])))/aa +
 	       (sqr(creal(fxb[i])) + sqr(cimag(fxb[i])))/bb;
       }
 
-      //      for (i=sett->nmin; i<sett->nmax; i++) 
-      //	F[i] += (sqr(creal(fxb[i])) + sqr(cimag(fxb[i])))/bb;
 
-#pragma omp atomic
       (*FNum)++;
 
       
@@ -858,162 +514,65 @@ int job_core(int pm,                   // Hemisphere
       static int ifile=0;
       if (!fraw) fraw = (double *) malloc((sett->nmax-sett->nmin)*sizeof(double));
       memcpy(fraw, F+sett->nmin, (sett->nmax-sett->nmin)*sizeof(double));
+      if ( (mm==-61 && nn==-32 && ss==273) ) {
+	char f1name[32];
+	ifile++;
+	sprintf(f1name, "fraw-%d.dat", ifile);
+	FILE *f1 = fopen(f1name, "w");
+	for(i=0; i<(sett->nmax-sett->nmin); i++)
+	  fprintf(f1, "%d   %lf   %lf  %lf  %lf  %lf %lf\n", i, fraw[i], 2.*M_PI*i/((double) sett->fftpad*sett->nfft) + sgnl0, 
+		  //	    sqr(creal(fxa[i])), sqr(cimag(fxa[i])), sqr(creal(fxb[i])), sqr(cimag(fxb[i])) );
+		  sqr(creal( ifo[0].sig.xDatma[2*i] )), sqr(cimag(ifo[0].sig.xDatmb[2*i])), sqr(creal(ifo[1].sig.xDatma[2*i])), sqr(cimag(ifo[1].sig.xDatmb[2*i])) );
+	fclose(f1);
+      }
 #endif
 
-#ifndef NORMTOMAX
+
       double pxout=0.;
       // Normalize F-statistics 
       if(!(opts->white_flag))  // if the noise is not white noise
-	   pxout=FStat(F + sett->nmin, sett->nmax - sett->nmin, NAVFSTAT, 0);
+	   pxout = FStat(F + sett->nmin, sett->nmax - sett->nmin, NAVFSTAT, 0);
 
-      for(i=sett->nmin; i<sett->nmax; i++) {
-        if ((Fc = F[i]) > opts->trl) { // if F-stat exceeds trl (critical value)
-          // Find local maximum for neighboring signals 
-          ii = i;
+      for(i=sett->nmin; i<sett->nmax; ++i) {
+	if (F[i] < opts->trl) continue;
+	double Fc; int ii;
+	ii = i;
+	Fc = F[i];
+	while (++i < sett->nmax && F[i] > opts->trl) {
+	  if(F[i] > Fc) {
+	    ii = i;
+	    Fc = F[i];
+	  } // if F[i] 
+	} // while i
 
-	  while (++i < sett->nmax && F[i] > opts->trl) {
-	    if(F[i] >= Fc) {
-	      ii = i;
-	      Fc = F[i];
-	    } // if F[i] 
-	  } // while i 
-	  // Candidate signal frequency
-	  sgnlt[0] = 2.*M_PI*ii/((FLOAT_TYPE)sett->fftpad*sett->nfft) + sgnl0;
-	  // Signal-to-noise ratio
-	  sgnlt[4] = sqrt(2.*(Fc-sett->nd));
+	// Candidate signal frequency
+	sgnlt[0] = 2.*M_PI*ii/((FLOAT_TYPE)sett->fftpad*sett->nfft) + sgnl0;
 	  
-#ifdef FSTATDEB
-	  if (pxout < 0.6) {
-	       printf("pxout  mm=%d  nn=%d  ss=%d\n", mm, nn, ss );
-	  }
-	  //if (sgnlt[4] > 7.1 && sgnlt[0]< 2.984513) {
-	  //if ( (mm==-10 && nn==-18 && ss==100) || (mm==-10 && nn==-18 && ss==-175)) {
-	  if ( (mm==-61 && nn==-32 && ss==273) ) {
-	       char f1name[32];
-	       ifile++;
-	       sprintf(f1name, "fraw-%d.dat", ifile);
-	       FILE *f1 = fopen(f1name, "w");
-	       for(i=0; i<(sett->nmax-sett->nmin); i++)
-		    fprintf(f1, "%d   %lf   %lf  %lf  %lf  %lf %lf\n", i, fraw[i], 2.*M_PI*i/((double) sett->fftpad*sett->nfft) + sgnl0, 
-			    //	    sqr(creal(fxa[i])), sqr(cimag(fxa[i])), sqr(creal(fxb[i])), sqr(cimag(fxb[i])) );
-			    sqr(creal( ifo[0].sig.xDatma[2*i] )), sqr(cimag(ifo[0].sig.xDatmb[2*i])), sqr(creal(ifo[1].sig.xDatma[2*i])), sqr(cimag(ifo[1].sig.xDatmb[2*i])) );
-	       fclose(f1);
-
-	       sprintf(f1name, "fnorm-%d.dat", ifile);
-	       f1 = fopen(f1name, "w");
-	       for(i=sett->nmin; i<sett->nmax; i++)
-		    fprintf(f1, "%d   %lf   %lf\n", i, F[i], 2.*M_PI*i/((double) sett->fftpad*sett->nfft) + sgnl0);
-	       fclose(f1);
-	       printf("Dump mm=%d  nn=%d  ss=%d  al1=%.17g   al2=%.17g   oms=%.17g   one=%.17g\n", mm, nn, ss, al1, al2, sett->oms, (sqr(al1)+sqr(al2))/sqr(sett->oms) );
-	       //exit(EXIT_SUCCESS);
-	  }
-#endif
-	  // Checking if signal is within a known instrumental line 
-	  int k, veto_status = 0; 
-	  for(k=0; k<sett->numlines_band; k++){
-	    if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
-	      veto_status=1; 
-	      break; 
-	    }   
-	  }
-	  int _sgnlc;
-	  if(!veto_status) {
-
-	    /* 
-#pragma omp critical
-	    {
-	      (*sgnlc)++; // increase found number
-	      // Add new parameters to output array 
-	      for (j=0; j<NPAR; ++j)    // save new parameters
-		sgnlv[NPAR*(*sgnlc-1)+j] = (FLOAT_TYPE)sgnlt[j];
-	    }
-	    */
-
-#pragma omp atomic capture
-	    {
-	      (*sgnlc)++; // increase found number
-	      _sgnlc = *sgnlc;
-	    }
-	    // Add new parameters to output array 
-	    for (j=0; j<NPAR; ++j)    // save new parameters
-	      sgnlv[NPAR*(_sgnlc-1)+j] = (FLOAT_TYPE)sgnlt[j];
-	    
-#ifdef VERBOSE
-	    printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
-		    *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
-#endif
-	  }
-	} // if Fc > trl 
-      } // for i
-      
-#else // new version
-    
-      imax = -1;
-      // find local maxima first
-      //printf("nmin=%d   nmax=%d    nfft=%d   nblocks=%d\n", sett->nmin, sett->nmax, nfft, nfft/blksize);
-      for(iblk=0; iblk < nfft/blksize; ++iblk) {
-	blkavg = 0.;
-	blkstart = sett->nmin + iblk*blksize; // block start index in F 
-	// in case the last block is shorter than blksize, include its elements in the previous block
-	if(iblk==(nfft/blksize-1)) {blksize = sett->nmax - blkstart;}
-	imax0 = imax+1; // index of first maximum in current block
-	//printf("\niblk=%d   blkstart=%d   blksize=%d    imax0=%d\n", iblk, blkstart, blksize, imax0);
-	for(i=1; i <= blksize; ++i) { // include first element of the next block
-	  ii = blkstart + i;
-	  if(ii < sett->nmax) 
-	    {ihi=ii+1;} 
-	  else 
-	    {ihi = sett->nmax; /*printf("ihi=%d  ii=%d\n", ihi, ii);*/};
-	  if(F[ii] > F[ii-1] && F[ii] > F[ihi]) {
-	    blkavg += F[ii];
-	    Fmax[++imax] = ii;
-	    ++i; // next element can't be maximum - skip it
-	  }
-	} // i
-	// now imax points to the last element of Fmax
-	// normalize in blocks 
-	blkavg /= (double)(imax - imax0 + 1);
-	for(i=imax0; i <= imax; ++i)
-	  F[Fmax[i]] /= blkavg;
-
-      } // iblk
-
-      //f1 = fopen("fmax.dat", "w");
-      //for(i=1; i < imax; i++)
-      //fprintf(f1, "%d   %lf \n", Fmax[i], F[Fmax[i]]);
-      //fclose(f1);
-      //exit(EXIT_SUCCESS);
-
-      // apply threshold limit
-      for(i=0; i <= imax; ++i){
-	//if(F[Fmax[i]] > opts->trl) {
-	if(F[Fmax[i]] > threshold) {
-	  sgnlt[0] = 2.*M_PI*i/((FLOAT_TYPE)sett->fftpad*sett->nfft) + sgnl0;
-	  // Signal-to-noise ratio
-	  sgnlt[4] = sqrt(2.*(F[Fmax[i]] - sett->nd));
-
-	  // Checking if signal is within a known instrumental line 
-	  int k, veto_status=0; 
-	  for(k=0; k<sett->numlines_band; k++)
-	    if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) { 
-	      veto_status=1; 
-	      break; 
-	    }   
-	  
-	  if(!veto_status) { 
-	    
-	    (*sgnlc)++; // increase number of found candidates
-	    // Add new parameters to buffer array 
-	    for (j=0; j<NPAR; ++j)
-	      sgnlv[NPAR*(*sgnlc-1)+j] = (FLOAT_TYPE)sgnlt[j];
-#ifdef VERBOSE
-	    printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
-		    *sgnlc, pm, mm, nn, ss, Fmax[i], sgnlt[4]);
-#endif 
+	// Checking if signal is within a known instrumental line 
+	int k, veto_status = 0; 
+	for(k=0; k<sett->numlines_band; k++){
+	  if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
+	    veto_status=1; 
+	    break; 
 	  }
 	}
-      } // i
-#endif // old/new version
+
+	if(!veto_status) {
+	  // Signal-to-noise ratio
+	  sgnlt[4] = sqrt(2.*(Fc - sett->nd));
+
+	  (*sgnlc)++; // increase found number
+	  // Add new parameters to output array 
+	  for (j=0; j<NPAR; ++j)    // save new parameters
+	    sgnlv[NPAR*(*sgnlc-1)+j] = (FLOAT_TYPE)sgnlt[j];
+	  
+#ifdef VERBOSE
+	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
+		  *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
+#endif
+	}
+      } // for i
+
       
 #if TIMERS>2
       tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
@@ -1022,15 +581,10 @@ int job_core(int pm,                   // Hemisphere
 #endif
       
     } // for ss 
-  } // omp parallel
   
 #ifndef VERBOSE 
   printf("Number of signals found: %d\n", *sgnlc); 
 #endif 
-
-  //  tend = get_current_time(CLOCK_REALTIME);
-  //time_elapsed = get_time_difference(tstart, tend);
-  //printf("Parallel part: %e  ( per thread %e ) s\n", time_elapsed, time_elapsed/omp_get_max_threads());
 
 
 #if TIMERS>2

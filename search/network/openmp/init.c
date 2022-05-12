@@ -904,22 +904,28 @@ void plan_fftw(
   fftw_arr->arr_len = (sett->fftpad*sett->nfft > sett->Ninterp 
                     ? sett->fftpad*sett->nfft : sett->Ninterp);
 
-  //  fftw_arr->xa = fftw_malloc(2*fftw_arr->arr_len*sizeof(fftw_complex));
+  //fftw_arr->xa = fftw_malloc(2*fftw_arr->arr_len*sizeof(fftw_complex));
   //fftw_arr->xb = fftw_arr->xa + fftw_arr->arr_len;
   fftw_arr->xa = fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
   fftw_arr->xb = fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
 
   sett->nfftf = sett->fftpad*sett->nfft;
+  printf("\narr_len=%d   nfft=%d   fftpad=%d  Ninterp=%d\n", fftw_arr->arr_len, sett->nfft, sett->fftpad, sett->Ninterp);
 
   // Change FFTW_MEASURE to FFTW_PATIENT for more optimized plan
   // (takes more time to generate the wisdom file)
   // this plan is executed in the parallel loop and thus should not be parallelized!
-  plans->plan = fftw_plan_dft_1d(sett->nfftf, fftw_arr->xa, fftw_arr->xa, FFTW_FORWARD, FFTW_MEASURE);
+#if defined(_OPENMP)
+  //fftw_plan_with_nthreads(1);
+#endif
+  //plans->plan = fftw_plan_dft_1d(sett->nfftf, fftw_arr->xa, fftw_arr->xa, FFTW_FORWARD, FFTW_MEASURE);
   
 #if defined(_OPENMP)
   fftw_plan_with_nthreads(omp_get_max_threads());
 #endif
-  
+  plans->plan = fftw_plan_dft_1d(sett->nfftf, fftw_arr->xa, fftw_arr->xa, FFTW_FORWARD, FFTW_MEASURE);
+  //plans->plan = fftw_plan_dft_1d(fftw_arr->arr_len, fftw_arr->xa, fftw_arr->xa, FFTW_FORWARD, FFTW_MEASURE);
+
   plans->pl_int = fftw_plan_dft_1d(sett->nfft, fftw_arr->xa, fftw_arr->xa, FFTW_FORWARD, FFTW_MEASURE);
 	                             
   plans->pl_inv = fftw_plan_dft_1d(sett->Ninterp, fftw_arr->xa, fftw_arr->xa, FFTW_BACKWARD, FFTW_MEASURE);

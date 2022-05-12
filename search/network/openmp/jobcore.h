@@ -33,4 +33,15 @@ int job_core(
 	     FLOAT_TYPE *sgnlv,        // candidate array
 	     int *FNum);               // candidate signal number
 
+
+void spindown_modulation(
+			 int nifo,
+			 int N,
+			 double het1,
+			 double *sgnlt,
+			 double _tmp1[][N],     
+			 fftw_complex *fxa,
+			 fftw_complex *fxb 
+			 );
+
 #endif
