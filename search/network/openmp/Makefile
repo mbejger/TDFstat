@@ -1,25 +1,24 @@
-TARGET = gwsearch-omp-broadwell-dev9-newfft-sleef3.5-allvec-newpara
+TARGET = gwsearch-omp-cascadelake
 
 VER := $(shell git rev-parse HEAD)
 
-# FFTW_DIR - fftw location, remember to compile it with optimizations (e.g. avx)
+# FFTW_DIR - fftw location
 FFTW_DIR = /opt/fftw/3.3.10-gcc9-mvapich2.2
 SINCOS =  SLEEF #SLEEF or GNUSINCOS
 
-CC = gcc -std=gnu11 -static-libgcc -fopenmp -fopt-info-inline-optimized-missed -flto
+CC = gcc -std=gnu11 -static-libgcc -fopenmp -flto
 #-flto ?? speeds up a little for AVX512 but slows down for AVX2 
 
 # pre-processor flags: TIMERS, VERBOSE (rich stdout output)
 CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=1 -D$(SINCOS) -UUSE_LOCKING #-DVERBOSE 
 CFLAGS += -I$(FFTW_DIR)/include 
-CFLAGS += -g -Wall -Wno-unused -fno-omit-frame-pointer \
-	  -O3 -funsafe-loop-optimizations -funroll-loops \
-	  -march=cascadelake -mtune=cascadelake \
-	  -ffast-math
+CFLAGS += -g -Wall -Wno-unused \
+	  -O3 -funsafe-loop-optimizations -funroll-loops -ffast-math \
+	  -march=cascadelake -mtune=cascadelake
 #	  -march=cascadelake -mtune=cascadelake  \
 #	  -march=broadwell -mtune=broadwell \
-# 	  -march=sandybridge -mtune=sandybridge -mavx
-#	  -march=haswell -mtune=haswell -mavx2 -mfma
+# 	  -march=sandybridge -mtune=sandybridge
+#	  -march=haswell -mtune=haswell
 
 LDFLAGS = -L$(FFTW_DIR)/lib
 
@@ -29,7 +28,7 @@ LDLIBS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
 
 ifeq ($(strip $(SINCOS)),SLEEF)
 SPATH = lib/sleef-3.5.1
-CFLAGS  += -DUSE_AVX2_SINCOS -I$(SPATH)/include
+CFLAGS  += -DUSE_AVX512 -I$(SPATH)/include
 LDFLAGS += -L$(SPATH)/lib64
 LDLIBS += -lsleef
 endif
