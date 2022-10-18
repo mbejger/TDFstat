@@ -1,14 +1,14 @@
-# Polgraw all-sky pipeline: search for almost monochromatic gravitational wave signals 
+# Polgraw Time Domain Fstatistic (TDFstat) pipeline: search for almost monochromatic gravitational wave signals 
 
 This is the documentation of a gravitational-wave search pipeline of the [Polgraw](https://polgraw.camk.edu.pl/en) group. 
 
-The pipeline's source code is [available here](https://github.com/mbejger/polgraw-allsky). 
+The pipeline's source code is [available here](https://github.com/Polgraw/TDFstat). 
 
 ### Pipeline flowchart  
 
 ##
 <p style="margin-left:50px;">
-![Code flowchart](img/pipeline.png)
+![Code flowchart](docs/img/pipeline.png)
 </p>
 
 ### Topics
