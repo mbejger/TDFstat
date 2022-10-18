@@ -1,2 +1,5 @@
+markdown: kramdown
+kramdown:
+  math_engine: katex
 remote_theme: carlosperate/jekyll-theme-rtd
 
