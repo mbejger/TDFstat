@@ -6,10 +6,7 @@ The pipeline's source code is [available here](https://github.com/Polgraw/TDFsta
 
 ### Pipeline flowchart  
 
-##
-<p style="margin-left:50px;">
-![Code flowchart](./docs/img/pipeline.png)
-</p>
+[Code flowchart](./docs/img/pipeline.png)
 
 ### Topics
 
