@@ -95,8 +95,6 @@ int main (int argc, char *argv[]) {
      flsum = iniparser_getstring (ini, "data:flsum", NULL);
      N = iniparser_getint (ini, "general:n", 344656);
      lfft = iniparser_getint (ini, "general:lfft", 2048);
-     *fftsize = lfft;
-     lfftr = lfft/4;
      alpha = iniparser_getdouble (ini, "general:alpha", 0.1);
      dt = iniparser_getdouble (ini, "general:dt", 0.5);
      othr = iniparser_getdouble (ini, "general:othresh", 250.);   // threshold to clean large outliers
@@ -251,6 +249,8 @@ int main (int argc, char *argv[]) {
 	  }
 	  fprintf (stderr, " Done.\n");
 
+	  *fftsize = lfft;
+	  lfftr = lfft/4;
 	  n = 2*ldat/lfft;
 	  lfftm = lfft-2*lfftr;
 	  lenx = n*lfftm+2*lfftr;
@@ -264,7 +264,8 @@ int main (int argc, char *argv[]) {
 	  Xout_array = (fftw_complex *) fftw_malloc (n*lfft*sizeof (fftw_complex));
 	  for (i=0; i<n; i++) {
 	       memcpy (Xin_array+i*lfft, rdt+i*lfft, lfft/2*sizeof (fftw_complex));
-	       memset (Xin_array+(2*i+1)*lfft/2, 0, lfft/2*sizeof (fftw_complex));
+	       //memset (Xin_array+(2*i+1)*lfft/2, 0, lfft/2*sizeof (fftw_complex));
+	       memset (Xin_array+(i*lfft+lfft/2+1), 0, (lfft/2-1)*sizeof (fftw_complex));
 	  }
 
 #if 1

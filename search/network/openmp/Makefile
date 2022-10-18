@@ -1,4 +1,4 @@
-TARGET = gwsearch-omp-cascadelake
+TARGET = gwsearch-omp-cascadelake-test
 
 VER := $(shell git rev-parse HEAD)
 
