@@ -8,7 +8,7 @@ The pipeline's source code is [available here](https://github.com/Polgraw/TDFsta
 
 ##
 <p style="margin-left:50px;">
-![Code flowchart](./img/pipeline.png)
+![Code flowchart](./docs/img/pipeline.png)
 </p>
 
 ### Topics
