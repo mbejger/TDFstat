@@ -1,12 +1,13 @@
-TARGET = gwsearch-omp-cascadelake-test
+ARCH = cascadelake
+TARGET = gwsearch-omp-$(ARCH)-test
 
 VER := $(shell git rev-parse HEAD)
 
 # FFTW_DIR - fftw location
 FFTW_DIR = /opt/fftw/3.3.10-gcc9-mvapich2.2
-SINCOS =  SLEEF #SLEEF or GNUSINCOS
+SINCOS = SLEEF #SLEEF or GNUSINCOS
 
-CC = gcc -std=gnu11 -static-libgcc -fopenmp -flto
+CC = gcc -std=gnu11 -static-libgcc -fopenmp #-flto
 #-flto ?? speeds up a little for AVX512 but slows down for AVX2 
 
 # pre-processor flags: TIMERS, VERBOSE (rich stdout output)
@@ -14,7 +15,7 @@ CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=1 -D$(SINCOS) -UUSE_L
 CFLAGS += -I$(FFTW_DIR)/include 
 CFLAGS += -g -Wall -Wno-unused \
 	  -O3 -funsafe-loop-optimizations -funroll-loops -ffast-math \
-	  -march=cascadelake -mtune=cascadelake
+	  -march=$(ARCH) -mtune=$(ARCH)
 #	  -march=cascadelake -mtune=cascadelake  \
 #	  -march=broadwell -mtune=broadwell \
 # 	  -march=sandybridge -mtune=sandybridge
@@ -28,7 +29,7 @@ LDLIBS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
 
 ifeq ($(strip $(SINCOS)),SLEEF)
 SPATH = lib/sleef-3.5.1
-CFLAGS  += -DUSE_AVX512 -I$(SPATH)/include
+CFLAGS  += -DUSE_AVX2 -I$(SPATH)/include
 LDFLAGS += -L$(SPATH)/lib64
 LDLIBS += -lsleef
 endif
@@ -54,7 +55,7 @@ clean:
 uninstall: clean
 	rm -f $(TARGET)
 
-.PHONY: all veclib clean uninstall
+.PHONY: all $(TARGET) veclib clean uninstall
 
 #----------------------------------------------
 
