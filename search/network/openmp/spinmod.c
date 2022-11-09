@@ -241,7 +241,7 @@ void spindown_modulation(int nifo, int N,
     double phase, cp, sp;
     complex double exph;
 #pragma omp parallel for schedule(static, 1) private(phase, exph, cp, sp) default(shared)
-    for(i=N-1; i!=-1; --i) {
+    for(i=N-1; i>-1; --i) {
       phase = het1*i + sgnlt[1]*_tmp1[n][i];
       sincos(phase, &sp, &cp);
       exph = cp - I*sp;

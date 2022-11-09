@@ -490,8 +490,8 @@ int job_core(int pm,                   // Hemisphere
 
       // Zero-padding
 #pragma omp parallel for schedule(static) shared(fxa, fxb)
-      for(i = sett->fftpad*sett->nfft-1; i != sett->N-1; --i)
-	fxa[i] = fxb[i] = 0.;
+      for(i = sett->fftpad*sett->nfft-1; i > sett->N-1; --i)
+	  fxa[i] = fxb[i] = 0.;
 
       fftw_execute_dft(plans->plan, fxa, fxa);
       fftw_execute_dft(plans->plan, fxb, fxb);
