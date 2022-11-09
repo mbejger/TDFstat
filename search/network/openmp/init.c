@@ -876,7 +876,7 @@ void plan_fftw(
 	FFTW_arrays *fftw_arr, 
 	Aux_arrays *aux_arr) {
 
-  char hostname[512], wfilename[512];
+  char hostname[128], wfilename[512];
   FILE *wisdom;
 
   /* Imports a "wisdom file" containing information 
@@ -891,7 +891,7 @@ void plan_fftw(
   fftw_init_threads();
 #endif
   
-  gethostname(hostname, 512);
+  gethostname(hostname, 128);
   sprintf (wfilename, "wisdom-%s.dat", hostname);
   if((wisdom = fopen (wfilename, "r")) != NULL) {
     fftw_import_wisdom_from_file(wisdom);

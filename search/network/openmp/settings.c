@@ -138,7 +138,8 @@ void detectors_settings(Search_settings* sett,
 		 data = fopen(x, "r");
 		 if (data) {
 		      fclose(data);
-		      strncpy(ifo[j].xdatname, x, strlen(x));
+		      //strncpy(ifo[j].xdatname, x, strlen(x));
+		      strcpy(ifo[j].xdatname, x);
 		      strncpy(ifo[j].name, dets[i], DETNAME_LENGTH);
 		      memset(x, 0, sizeof(x));
 		      j++;
@@ -306,7 +307,7 @@ int read_lines( Search_settings *sett,
   
   double fdotMax, Dfmaxmax;
   double normdtEmax[MAX_DETECTORS], normdEmax[MAX_DETECTORS];
-  
+
   // calculate fdotMax from sett.Smin
   fdotMax = sett->Smin/(2.*M_PI*sett->dt*sett->dt);
 

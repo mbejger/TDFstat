@@ -6,7 +6,7 @@
 
 #define MAX_DETECTORS 8        // Maximum number of detectors in network 
 #define DETNAME_LENGTH 2       // Detector name length (H1, L1, V1...)
-#define XDATNAME_LENGTH 512    // Maximum length of input file name xdat*bin 
+#define XDATNAME_LENGTH 2048   // Maximum length of input file (xdat*bin) path
 #define INICANDSIZE 1048576    // Initial size for array candidates storage; 
                                // realloc called if needed (in coincidences)  
 
@@ -28,7 +28,7 @@ typedef struct _comm_line_opts {
   double trl;
   double fpo_val, narrowdown, overlap;
   
-  char prefix[512], dtaprefix[512], label[512], 
+  char prefix[512], dtaprefix[512], label[32], 
     range[512], getrange[512], qname[562], usedet[32], addsig[512], *wd;
   
 } Command_line_opts;
