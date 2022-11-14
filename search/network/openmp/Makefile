@@ -1,10 +1,11 @@
-ARCH = cascadelake
+ARCH = cascadelake # min. required for SLEEF is haswell (AVX2+FMA)
 TARGET = gwsearch-omp-$(ARCH)-test
 
 VER := $(shell git rev-parse HEAD)
 
 # FFTW_DIR - fftw location
 FFTW_DIR = /opt/fftw/3.3.10-gcc9-mvapich2.2
+#FFTW_DIR = $(CONDA_PREFIX)
 SINCOS = SLEEF #SLEEF or GNUSINCOS
 
 CC = gcc -std=gnu11 -static-libgcc -fopenmp #-flto
@@ -16,10 +17,6 @@ CFLAGS += -I$(FFTW_DIR)/include
 CFLAGS += -g -Wall -Wno-unused \
 	  -O3 -funsafe-loop-optimizations -funroll-loops -ffast-math \
 	  -march=$(ARCH) -mtune=$(ARCH)
-#	  -march=cascadelake -mtune=cascadelake  \
-#	  -march=broadwell -mtune=broadwell \
-# 	  -march=sandybridge -mtune=sandybridge
-#	  -march=haswell -mtune=haswell
 
 LDFLAGS = -L$(FFTW_DIR)/lib
 
