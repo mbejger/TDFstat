@@ -157,28 +157,24 @@ typedef struct _ampl_mod_coeff {
 
 typedef struct _detector { 
 
-  char xdatname[XDATNAME_LENGTH]; 
-  char name[DETNAME_LENGTH]; 
+    char xdatname[XDATNAME_LENGTH]; 
+    char name[DETNAME_LENGTH]; 
  
-  double ephi, 		// Geographical latitude phi in radians
-         elam, 		// Geographical longitude in radians 
-         eheight,   // Height h above the Earth ellipsoid in meters
-         egam; 		// Orientation of the detector gamma  
+    double ephi, 		// Geographical latitude phi in radians
+	   elam, 		// Geographical longitude in radians 
+	   eheight,             // Height h above the Earth ellipsoid in meters
+           egam; 		// Orientation of the detector gamma  
 
-  Ampl_mod_coeff amod; 
-  Signals sig;  
-
-     //double lines[MAXL][3]; // Array for lines: column values 
-                         // are beginning and end of line to veto 
-     //int numlines;                        
+    Ampl_mod_coeff amod; 
+    Signals sig;  
 
 } Detector_settings; 
 
-
-  /* Array of detectors (network) 
+  /* Global array of detectors (network) 
    */ 
 
-struct _detector ifo[MAX_DETECTORS]; 
+extern Detector_settings ifo[MAX_DETECTORS];
+
 
 // Command line option struct for coincidences 
 typedef struct _comm_line_opts_coinc {

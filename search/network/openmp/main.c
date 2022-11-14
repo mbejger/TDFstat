@@ -15,9 +15,9 @@
 #include <dirent.h>
 #include <signal.h>
 
+#include "struct.h"
 #include "auxi.h"
 #include "settings.h"
-#include "struct.h"
 #include "jobcore.h"
 #include "init.h"
 
@@ -34,6 +34,7 @@
 #define DTAPREFIX .
 #endif
 
+Detector_settings ifo[MAX_DETECTORS];
 volatile sig_atomic_t save_state = 0;
 
 
