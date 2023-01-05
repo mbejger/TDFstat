@@ -1,28 +1,32 @@
+---
+layout: default
+title: False Alarm Probability
+excerpt:
+nav_order: 5
+---
+
 # False alarm probability of coincidences
 
 A general formula for probability that is used in the estimation of significance of the coincidences is implemented. The code is available at [github](https://github.com/mbejger/polgraw-allsky/tree/master). Run `git clone https://github.com/mbejger/polgraw-allsky.git` to get the repository.
 
-#### Prerequisites 
+## Prerequisites 
 
 The code is written in standard `C`. The only dependency is [GNU Scientific Library (GSL)](http://www.gnu.org/software/gsl/), used to manipulate the Fisher matrix (calculate the eigenvectors and eigenvalues), the $\Gamma$ function and for the combinations. 
  
-### Theoretical description 
+## Theoretical description 
 
 This description is a short Appendix version of [Implementation of an F-statistic all-sky search for continuous gravitational waves in Virgo VSR1 data](http://iopscience.iop.org/0264-9381/31/16/165014/). 
 
 For a given frequency band we analyze $L$ non-overlapping time segments: the search in the $l$th segment produces $N_l$ candidates. The size of the parameter space for each time segment is the same and it can be divided into the number $N_{\rm cell}$ of independent cells. The code tests the null hypothesis that the coincidences among candidates from $L$ segments are accidental.
-The probability for a candidate event to fall into any given coincidence cell is equal to $1/N_{\rm cell}$. The probability $\epsilon_l$ that a given coincidence cell is populated with one or more candidate events is given by
-$$
-\epsilon_l = 1 - \Big(1 - \frac{1}{N_{\rm cell}}\Big)^{N_l},  
-\quad\text{and for independent candidates (one candidate in one cell) it is}\quad  
-\epsilon_l = \frac{N_l}{N_{\rm cell}}. 
-$$
-For two or more candidates within a given cell we choose the one with the highest signal-to-noise ratio. The probability $p_F(N_{\rm cell})$ that any given coincidence cell out of the total of $N_{\rm cell}$ cells contains candidate events from $C_{max}$ or more distinct data segments is given by a generalized binomial distribution: 
+The probability for a candidate event to fall into any given coincidence cell is equal to $1/N_{\rm cell}$. The probability $\epsilon_l$ that a given coincidence cell is populated with one or more candidate events is given by $\epsilon_l = 1 - \Big(1 - \frac{1}{N_{\rm cell}}\Big)^{N_l}$, 
+and for independent candidates (one candidate in one cell) it is $\epsilon_l = \frac{N_l}{N_{\rm cell}}$.
+
+For two or more candidates within a given cell we choose the one with the highest signal-to-noise ratio. The probability $p_F(N_{\rm cell})$ that any given coincidence cell out of the total of $N_{\rm cell}$ cells contains candidate events from $C_{max}$ or more distinct data segments is given by a generalized binomial distribution:
 \begin{eqnarray}
 p_F(N_{\rm cell}) &=& \sum_{n=C_{max}}^{L} \frac{1}{n!(L-n)!} \times \sum_{\sigma\in\Pi(L)} \epsilon_{\sigma(1)}\ldots\epsilon_{\sigma(n)}(1-\epsilon_{\sigma(n+1)})\ldots(1-\epsilon_{\sigma(L)}),
 \end{eqnarray}
 where $\sum_{\sigma \in \Pi(L)}$ is the sum over all permutations of $L$ data sequences.
-Finally the probability $P_F$ that there is ${\mathcal C}_{max}$ or more coincidences
+Finally the probability $P_F$ that there is $C_{max}$ or more coincidences
 in one or more of the $N_{\rm cell}$ cells is
 \begin{equation}
 P_F = 1 - \left(1 - p_F(N_{\rm cell})\right)^{N_{\rm cell}}.
@@ -30,7 +34,10 @@ P_F = 1 - \left(1 - p_F(N_{\rm cell})\right)^{N_{\rm cell}}.
 
 In order to find coincidences the entire cell coincidence grid is shifted by half a cell width in all possible $2^4 = 16$ combinations of the four parameter-space dimensions of $(f, \dot{f}, \delta, \alpha)$, and coincidences are searched in all the 16 coincidence grids. It does not account for cases when candidate events are located on opposite sides of cell borders, edges, and corners. This leads to a higher number of accidental coincidences, and consequently it underestimates the false alarm probability.
 
-In the four dimension parameter space of $(f, \dot{f}, \delta, \alpha)$ the formula for the probability $P^{\rm shifts}_F$ that there are ${\mathcal C}_{\mathrm{max}}$ or more independent coincidences in one or more of the $N_{\rm cell}$ cells in all 16 grid shifts is 
+In the four dimension parameter space of $(f, \dot{f}, \delta, \alpha)$ the formula for the probability
+$P_{F}^{\rm shifts}$ that there are $C_{max}$ or more independent coincidences in one or more of the $N_{\rm cell}$ cells in all 16 grid shifts is
+
+$$
 \begin{eqnarray}
 \label{eq:FAPs}
 P^{\rm shifts}_F = 1 - \bigg[ 1 - \Big( 2^4 p_F(N_c) 
@@ -41,15 +48,16 @@ P^{\rm shifts}_F = 1 - \bigg[ 1 - \Big( 2^4 p_F(N_c)
 - \Big( {4 \choose 3} p_F(2^3 N_c) + {4 \choose 4} p_F(2^4 N_c) \Big) 
 - {4 \choose 4} p_F(2^4 N_c)\Big)  \bigg]^{N_c}.
 \end{eqnarray}
+$$
 
-By choosing a certain false alarm probability $P_F$, we can calculate the threshold number ${\mathcal C}_{\mathrm{max}}$ of coincidences. If we obtain more than ${\mathcal C}_{\mathrm{max}}$ coincidences, the null hypothesis that coincidences are accidental is rejected at the significance level of $P_F$.
+By choosing a certain false alarm probability $P_F$, we can calculate the threshold number $C_{\mathrm{max}}$ of coincidences. If we obtain more than $C_{max}$ coincidences, the null hypothesis that coincidences are accidental is rejected at the significance level of $P_F$.
 
 
-### Compilation
+## Compilation
 
 Run `make fap`; resulting binary is called `fap` (modify the `Makefile` to fit your system).
 
-### Full list of switches 
+## Full list of switches 
 
 To obtain the full list of options, type 
 ```
@@ -73,7 +81,7 @@ Also:
 |-----------------|:------------|
 | --help          |This help    |
 
-### Example 
+## Example 
 
 Using the software injection added to 2-day Gaussian noise data segments (see [minimal example of the pipeline](../polgraw-allsky/pipeline_script)): 
 ```bash 
@@ -89,7 +97,7 @@ Number of days in the time segment `nod` equals 2, fraction of the band vetoed `
 ```
 (see the [coincidences](../polgraw-allsky/coincidences) section for details). 
 
-### Output
+## Output
 
 ```bash 
 % ./fap -nod 2 -band 1234 -data <(sort -gk5 -gk10 summary | tail -1) -grid ../../testdata/2d_0.25/004 -vetofrac 0.0 -cellsize 4 -threshold 1.0 

@@ -1,14 +1,21 @@
+---
+layout: default
+title: TDFstat pipeline
+excerpt:
+nav_order: 1
+---
+
 # Polgraw Time Domain Fstatistic (TDFstat) pipeline: search for almost monochromatic gravitational wave signals 
 
 This is the documentation of a gravitational-wave search pipeline of the [Polgraw](https://polgraw.camk.edu.pl/en) group. 
 
 The pipeline's source code is [available here](https://github.com/Polgraw/TDFstat). 
 
-### Pipeline flowchart  
+## Pipeline flowchart  
 
 ![Code flowchart](./img/pipeline.png)
 
-### Topics
+## Topics
 
 1. [Input data generation](input_data.md) 
 2. [F-statistic candidate signal search](search_for_candidates.md)
@@ -19,7 +26,7 @@ The pipeline's source code is [available here](https://github.com/Polgraw/TDFsta
 7. [Pipeline: a minimal example](pipeline_script.md)
 8. [Documents and publications](articles.md)
 
-### Contributors 
+## Contributors 
 
 In alphabetic order:
 

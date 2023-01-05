@@ -1,26 +1,31 @@
+---
+layout: default
+title: Search
+excerpt:
+nav_order: 3
+---
+
 # F-statistic candidate signal search
 
 Production serial code for a network of detectors is available at [here](https://github.com/mbejger/polgraw-allsky/tree/master/search/network/src-cpu). `OpenMP` version is at [this location](https://github.com/mbejger/polgraw-allsky/tree/master/search/network/src-openmp). To get the whole pipeline, run `git clone https://github.com/mbejger/polgraw-allsky.git`. 
 
 
-### Algorithm flowchart
-##
+## Algorithm flowchart
 
 ![Code flowchart](img/flowchart.png)
 
 
-### Prerequisites
+## Prerequisites
 
 The code is written in standard `C`. [GNU Scientific Library (GSL)](http://www.gnu.org/software/gsl/) and the [FFTW library](http://www.fftw.org) (version 3.0 or later) are needed to run the code. [GNU struct dirent](http://www.gnu.org/software/libc/manual/html_node/Accessing-Directories.html#Accessing-Directories) objects are used to read the directories. 
 
 Optionally, [SLEEF](http://shibatch.sourceforge.net) or [YEPPP!](http://www.yeppp.info), libraries for high-performance computing that are optimized for speed are used to evaluate the trigonometric functions in the search code. These libraries are ported with the source code and are located in `src/lib`. The choice which of these libraries to use has to be made at compilation time by modifying the `Makefile`. 
 
-### Compilation 
+## Compilation 
 
 Run  `make gwsearch-cpu` or `make` in `search/network/src-cpu`, resulting  binary is called `gwsearch-cpu` (this is the default `C` version not-optimized with `openMP`; for the `openMP` version see the `search/network/src-openmp` directory). Modify the `Makefile` to fit your system. By default the `YEPPP!` library is selected. 
 
-####
-#### Full list of switches
+## Full list of switches
 
 For the full list of options, type
 
@@ -56,7 +61,7 @@ Also:
 | --help          | This help | 
 
 
-### Example
+## Example
 
 Minimal call to `gwsearch-cpu` is as follows (code compiled with the `GNUSINCOS` option): 
 
@@ -73,8 +78,7 @@ where
 * `nod` number of days is $2$, 
 * `band` is the number of the frequency band (see the [input data structure](../polgraw-allsky/input_data) for details). 
 
-#### 
-#### Network of detectors 
+### Network of detectors 
 
 Test data frames $nnn=001-008$ with pure Gaussian noise 2-day time segments with sampling time equal to 2s (`xdatc_nnn_1234.bin`) for two LIGO detectors H1 and L1 are [available here](https://polgraw.camk.edu.pl/H1L1_2d_0.25.tar.gz). 
 
@@ -106,7 +110,7 @@ The program will proceed assuming that
   * `-output` is the current directory, 
   * `--nocheckpoint` disables the checkpointing (writing the last visited position on the grid to the `state` file), 
 
-### Output files
+## Output files
 
 Binary output files, containing trigger candidate events above an arbitrary threshold (option `-threshold` for the $\mathcal{F}$-statistic, default 20), are written to the `output_dir` directory. There are two output files for every input data sequence: `triggers_nnn_bbbb_1.bin` and
 `triggers_nnn_bbbb_2.bin`,  where  `1` and  `2` correspond to the northern and southern ecliptic hemisphere. Each trigger (candidate) event occupies `40` consecutive bytes (5 double numbers), with the following meaning:
@@ -134,8 +138,7 @@ For the example above, the first 10 triggers from `triggers_001_1234_2.bin` are
 2.08710778e-01  3.43510887e-10 -7.68007347e-02 2.59248668e+00 5.17537018e+00 
 ```
 
-####
-#### Auxiliary output files
+### Auxiliary output files
 
 * `wisdom-hostname.dat` - performance-testing file created by the `FFTW`. The `hostname` variable is determined by a call to `gethostname()`, 
 

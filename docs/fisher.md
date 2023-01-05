@@ -2,16 +2,16 @@
 
 The Fisher matrix associated with the signal model and its inversion is calculated using [this code](https://github.com/mbejger/polgraw-allsky/tree/master/search/network/src-cpu/fisher.c). 
 
-### Prerequisites
+## Prerequisites
 
 The code is written in standard `C` and it's mostly based on functions used in [search](../polgraw-allsky/search_for_candidates/). Arbitrary-precision interval arithmetic [Arb](http://arblib.org) library is used to invert the (usually) not-very-well posed Fisher matrix, so it has to be installed beforehand. [Arb](http://arblib.org) requires [FLINT](http://www.flintlib.org), [MPFR](http://www.mpfr.org), and either [MPIR](http://www.mpir.org) or [GMP](http://www.gmplib.org). 
 
-### Compilation 
+## Compilation 
 
 Run  `make fisher` in `search/network/src-cpu` - resulting  binary is called `fisher`. Modify the `Makefile` (especially the variable `ARB_DIR`) to fit your system. 
 
-####
-#### Full list of switches
+
+## Full list of switches
 
 For the full list of options, type
 
@@ -36,7 +36,7 @@ Also:
 | --help          | This help | 
 
 
-### Example
+## Example
 
 Minimal call to `fisher` is as follows: 
 
@@ -91,7 +91,7 @@ $$
 
 with $\psi(f, \dot{f}, \delta, \alpha, t)$ being the phase of the signal, and $a$ and $b$ the amplitude modulation functions (calculated in the [modvir](https://github.com/mbejger/polgraw-allsky/tree/master/search/network/src-cpu/settings.c) function). 
 
-### Example output 
+## Example output 
 
 ```bash 
 Number of days is 2
@@ -116,5 +116,3 @@ Inverting the Fisher matrix...
 Diagonal elements of the covariance matrix:
 2.561275e-04 3.867944e-18 2.363103e-03 9.137957e-04 1.343874e+05 4.107046e+04 3.329715e+04 1.117611e+05 
 ```
-
-

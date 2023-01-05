@@ -1,12 +1,19 @@
+---
+layout: default
+title: Sensitivity upper limits
+excerpt:
+nav_order: 7
+---
+
 # Sensitivity upper limits 
 
 This directory contains a set of scripts that prepare and run a pipeline search in a small area in the parameter space around the injected signal. 
 
-### Prerequisites 
+## Prerequisites 
 
 The scripts require `python3`. A working solution is to install a `python` virtual environment (`python3` comes with a built-in `pyvenv` virtual environment software).  
 
-#### Install `python3.4.5` locally
+### Install `python3.4.5` locally
 
 Let's assume the installation directory is  
 ```bash 
@@ -25,7 +32,7 @@ make install
 cd ../; rm -fr Python-3.4.5*
 ```
 
-#### Create virtual environment 
+### Create virtual environment 
 
 In a selected location (`/path/to/venvdir`) type
  
@@ -47,7 +54,7 @@ pip install matplotlib
 pip install pandas
 ```
 
-### Running the scripts 
+## Running the scripts 
 
 The steps of the procedure is as follows:
 
@@ -95,7 +102,7 @@ band h   ul
 0165 0.250 0.95
 0165 0.300 0.99
 ```
-#### Serial (stacked) version for longer jobs 
+### Serial (stacked) version for longer jobs 
 
 `script2.py` creates subdirectories and a `job_BAND.sub` file for a list of amplitudes for BAND from `bandlist`, stacked one after another (can be handy to send one band as one job to the queue). Call: 
 

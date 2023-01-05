@@ -1,14 +1,21 @@
+---
+layout: default
+title: Coincidences
+excerpt:
+nav_order: 4
+---
+
 # Coincidences between candidates 
 
 In order to establish the probability of detection of a real gravitational wave, after finding the candidate signals with the [F-statistic candidate signal search](../polgraw-allsky/candidate_search/), the pipeline searches for coincidences between candidates found in different time frames. 
 
 The coincidences code is available at [github](https://github.com/mbejger/polgraw-allsky/tree/master). To get it, run `git clone https://github.com/mbejger/polgraw-allsky.git`.
 
-#### Prerequisites 
+## Prerequisites 
 
 The code is written in standard `C`. The only dependency is [GNU Scientific Library (GSL)](http://www.gnu.org/software/gsl/), used to manipulate the Fisher matrix (calculate the eigenvectors and eigenvalues). [GNU struct dirent](http://www.gnu.org/software/libc/manual/html_node/Accessing-Directories.html#Accessing-Directories) objects are used to read the directories. 
  
-### The idea behind coincidences 
+## The idea behind coincidences 
 
 After finding the candidate signals in different time frames (`search`), we want to confirm the existence of signals with the same parameters along the span of time segments. to further perform a validation search for high-coincidence, or otherwise interesting candidates (the [followup](https://github.com/mbejger/polgraw-allsky/tree/master/followup), currently under construction). To do this, the candidates from a list of trigger files (time frames) are read, and for each trigger file
 
@@ -20,11 +27,11 @@ After finding the candidate signals in different time frames (`search`), we want
 
 *TODO: describe cell shifts (16 different shifts in total: 0101, 0110, 0010 etc. in f, s, d, a directions) and scaling of cells (used to define the linear parameters for a given cell to subsequently compare the candidate values)* 
 
-### Compilation
+## Compilation
 
 Run `make coincidences`; resulting binary is called `coincidences`. Modify the `Makefile` to fit your system.
 
-#### Full list of switches 
+## Full list of switches 
 Type 
 ```
 % ./coincidences --help 
@@ -56,7 +63,7 @@ Also:
 | --help          |This help    |
 
 
-### Example 
+## Example 
 
 Using the software injection added to 2-day Gaussian noise data segments (see [minimal example of the pipeline](../polgraw-allsky/pipeline_script)):
 ```

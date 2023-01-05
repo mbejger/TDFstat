@@ -1,3 +1,10 @@
+---
+layout: default
+title: Followup
+excerpt:
+nav_order: 6
+---
+
 # Followup 
 
 Currently work in progress; for the present state of the code see [here](https://github.com/mbejger/polgraw-allsky/tree/master/followup). 

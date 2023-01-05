@@ -1,3 +1,10 @@
+---
+layout: default
+title: Input data generation
+excerpt:
+nav_order: 2
+---
+
 # Input data generation
 
 ## Extract narrow-band time series from Short Fourier Transform databases with `extract_band`
