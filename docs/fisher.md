@@ -93,7 +93,7 @@ with $\psi(f, \dot{f}, \delta, \alpha, t)$ being the phase of the signal, and $a
 
 ## Example output 
 
-```bash 
+```
 Number of days is 2
 Input data directory is 2d_0.25
 Frame and band numbers are 1 and 1234

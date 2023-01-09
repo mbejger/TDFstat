@@ -1,7 +1,5 @@
 ---
-layout: default
 title: Sensitivity upper limits
-excerpt:
 nav_order: 7
 ---
 
@@ -16,11 +14,11 @@ The scripts require `python3`. A working solution is to install a `python` virtu
 ### Install `python3.4.5` locally
 
 Let's assume the installation directory is  
-```bash 
+```
 installdir=/path/to/installdir
 ```
 then 
-```bash 
+```
 mkdir -p ${installdir}; cd ${installdir} 
 wget https://www.python.org/ftp/python/3.4.5/Python-3.4.5.tgz
 tar zxvf Python-3.4.5.tgz
@@ -36,18 +34,18 @@ cd ../; rm -fr Python-3.4.5*
 
 In a selected location (`/path/to/venvdir`) type
  
-```bash 
+```
 ${installdir}/bin/pyvenv venv
 ```
 Activate the virtual environment
 
-```bash
+```
 . /path/to/venvdir/bin/activate
 ```
 
 (to leave the environment, type `deactivate`). You can now install specific packages using the `pip` installer: 
 
-```bash
+```
 pip install numpy
 pip install scipy
 pip install matplotlib
@@ -73,13 +71,13 @@ The script `script.py` creates a subdirectory in which the pipeline will be laun
     * how to perform the search for coincidences etc. 
 
 2. `bandlist` which is a list of bands with strain amplitudes, for example:  
-```bash
+```
 0164 2.25e-1 
 0165 1.5e-1 2e-1 2.5e-1 3e-1
 0166 2e-1 4e-1
 ```
 The call is
-```bash
+```
 % python script.py config.ini bandlist
 ```
 Two other auxiliary files are:
@@ -87,15 +85,15 @@ Two other auxiliary files are:
 2. `PBS/Torque` script `job.sub`, launched into the cluster queue and running `script.sh` (modify it to fit other systems, e.g., the `slurm` scheduler). 
 
 Script `script.py` creates a `run.sh` file which contains commands to send the jobs into the queue. The results are summary files (`.sum`) for the requested number of simulations. In order to process them, call the `summary.py` script
-```bash
+```
 % python summary.py band coincidence_threshold number_of_simulations
 ```
 for example 
-```bash
+```
 % python summary.py 0165 0.7 100
 ```
 The result will be something as follows (columns are `band` number, amplitude `h`, upper limit `ul`): 
-```bash
+```
 band h   ul 
 0165 0.150 0.61
 0165 0.200 0.78
@@ -106,16 +104,16 @@ band h   ul
 
 `script2.py` creates subdirectories and a `job_BAND.sub` file for a list of amplitudes for BAND from `bandlist`, stacked one after another (can be handy to send one band as one job to the queue). Call: 
 
-```bash
+```
 % python script2.py config.ini bandlist
 ```
 and then (for e.g., band 0165) send it to the queue 
-```bash 
+```
 % qsub -N 0165 -v howmany=100 job_0165.sub
 ```
 The summary of simulations for a given band (`0165`, say) processed by the [summary.sh](https://github.com/mbejger/polgraw-allsky/blob/master/sensitivity-scripts/summary.sh) result in the following list of `h0` amplitudes followed by the corresponding fractions of significant coincidences (`N_coin/N`):
 
-```bash
+```
 band h   ul 
 0165 0.150 0.61
 0165 0.200 0.78
@@ -132,7 +130,7 @@ def sigmoid(x, x0, k):
 ```
 to the above data. Fitting is done by [ul.py](https://github.com/mbejger/polgraw-allsky/blob/master/sensitivity-scripts/upper-limits/ul.py):
 
-```bash
+```
 % python ul.py 0165_results 0165 0.01 test.pdf
 0165 2.7026e-01
 ```

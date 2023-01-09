@@ -23,7 +23,7 @@ The pipeline's source code is [available here](https://github.com/Polgraw/TDFsta
 4. [False alarm probability of coincidences](fap_coincidences.md) 
 5. [Followup of interesting outliers](followup.md)
 6. [Sensitivity upper limits](sensitivity_upper_limits.md)
-7. [Pipeline: a minimal example](pipeline_script.md)
+7. [Pipeline: a minimal example](simple_example.md)
 8. [Documents and publications](articles.md)
 
 ## Contributors 

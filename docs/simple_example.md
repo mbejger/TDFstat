@@ -77,7 +77,7 @@ band=1234; dt=2; nod=2; ./sigen -amp 4.e-2 -band $band -dt $dt -gsize 10 -reffr 
 ```
 Signal parameters used in this example:
 
-```bash 
+```
 % cat sig1 
 amp 4.000000e-02
 10
@@ -94,7 +94,7 @@ amp 4.000000e-02
 
 ## Adding signal to the Gaussian data and searching for candidates
 
-```bash 
+```bash
 band=1234; dt=2; nod=2; for d in $(seq -f %03g 1 8); do 
 
   LD_LIBRARY_PATH=lib/yeppp-1.0.0/binaries/linux/x86_64 ./gwsearch-cpu \
@@ -125,7 +125,7 @@ This produces trigger files for each frame (size in bytes also listed):
 
 First 10 triggers from `triggers_001_1234_2.bin` are 
 
-```bash
+```
 3.05617018e+00 -3.42376198e-08 -7.68007347e-02 2.59248668e+00 5.06667333e+00 
 1.18243015e+00 -3.20762991e-08 -7.68007347e-02 2.59248668e+00 5.05528873e+00 
 1.08103361e-01 -2.77536578e-08 -7.68007347e-02 2.59248668e+00 5.07085254e+00 
@@ -140,7 +140,7 @@ First 10 triggers from `triggers_001_1234_2.bin` are
 
 ## Coincidences among these trigger files 
 
-```bash 
+```bash
 cd ../../../coincidences/src
 make
 band=1234; dt=2; nod=2; fpo=$(echo $band $dt |awk '{printf("%.6f", 10 + 0.96875*$1/(2.0*$2))}'); for s in {0..1}{0..1}{0..1}{0..1}; do 

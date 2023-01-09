@@ -69,10 +69,10 @@ Using the software injection added to 2-day Gaussian noise data segments (see [m
 ```
 % for s in {0..1}{0..1}{0..1}{0..1}; do ./coincidences -data ../../search/network/src-cpu -output . -shift $s -scalef 4 -scales 4 -scaled 4 -scalea 4 -refr 4 -dt 2 -trigname 1234_2 -refloc ../../testdata/2d_0.25/004 -nod 2 -fpo 308.859375 -snrcutoff 5; done 2>> summary
 ```
-This assumes that for the band $bbbb=1234$ and the sampling time $dt=2\ \mathrm{s}$ the band frequency $fpo=308.859375\ \mathrm{Hz}$, because 
-$$
-fpo = 10 + (1 - 2^{-5})\cdot bbbb\cdot \frac{1}{2dt}\ \mathrm{[Hz]}.
-$$
+This assumes that for the band $bbbb=1234$ and the sampling time $dt=2\ \mathrm{s}$ the band frequency $fpo=308.859375\ \mathrm{Hz}$, because
+
+$$fpo = 10 + (1 - 2^{-5})\cdot bbbb\cdot \frac{1}{2dt}\ \mathrm{[Hz]}.$$
+
 The reference grid file `grid.bin`, corresponding to the reference frame `004` (`-refr 4`) is located at the `-refloc` location. Signal-to-noise ratio cutoff is set to 5 (`-snrcutoff 5`). Some output is directed to `stdin`. For example, the output for shift `0000` is 
 ```
 Number of days is 2
@@ -109,10 +109,10 @@ This output contains the
 * 8 triplets of the frame number, number of all candidates in the corresponding triggers file, and the number of unique candidates after sorting to unique cells ($8\times 3$ integers), 
 * frame numbers participating in the coincidence ($5$ integers). 
 
-Coincidences larger or equal `mincoin` (default value `3`) are recorded in binary files `.coi`, separately for each shift, in the `-output` directory. Each coincidence is a set of following numbers: 
-$$
-N_{coin},\quad\bar{f},\quad\bar{s},\quad\bar{\delta},\quad\bar{\alpha},\quad\widetilde{\mathrm{snr}},\quad\mathrm{fr}_{1},\,\dots\,\mathrm{fr}_{N_{coin}},\quad\mathrm{p}_{1},\,\dots\,\mathrm{p}_{N_{coin}}
-$$
+Coincidences larger or equal `mincoin` (default value `3`) are recorded in binary files `.coi`, separately for each shift, in the `-output` directory. Each coincidence is a set of following numbers:  
+
+$$N_{coin},\quad\bar{f},\quad\bar{s},\quad\bar{\delta},\quad\bar{\alpha},\quad\widetilde{\mathrm{snr}},\quad\mathrm{fr}_{1},\,\dots\,\mathrm{fr}_{N_{coin}},\quad\mathrm{p}_{1},\,\dots\,\mathrm{p}_{N_{coin}}$$
+
 where 
 
 * $N_{coin}$ is the multiplicity of coincidence (written as one `unsigned short int`), 

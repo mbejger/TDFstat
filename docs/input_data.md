@@ -1,7 +1,5 @@
 ---
-layout: default
 title: Input data generation
-excerpt:
 nav_order: 2
 ---
 
@@ -29,7 +27,7 @@ where `input_file` is an ASCII file containing the following rows:
 * The frequency band in Hz
 * The width of frequency band in Hz
 
-e.g.,  
+e.g.,
 ```
 100000
 J0034+1612_2010-10-10.out
@@ -97,10 +95,10 @@ Beginning of each time frame is saved in the `nnn/DD/starting_date` file, e.g.,
 % cat 2d_0.25/001/H1/starting_date
 1.1260846080e+09
 ```
-Frames `nnn` are labelled with three-digit consecutive number. For the `O1` data, the bandwidth is `0.25 Hz` ($dt = 2s$). For a given $dt$, the reference band frequency `fpo` is defined as 
-$$
-fpo = 10 + (1 - 2^{-5})\cdot bbbb\cdot \frac{1}{2dt}\ \mathrm{[Hz]}. 
-$$
+Frames `nnn` are labelled with three-digit consecutive number. For the `O1` data, the bandwidth is `0.25 Hz` ($dt = 2s$). For a given $dt$, the reference band frequency `fpo` is defined as
+
+$$fpo = 10 + (1 - 2^{-5})\cdot bbbb\cdot \frac{1}{2dt}\ \mathrm{[Hz]}.$$
+
 Neighboring bands overlap by $2^{-5}/(2dt)\ \mathrm{Hz}$. `O1` data in the frequency range $10-2000\ \mathrm{Hz}$ contains $8220$ narrow `0.25 Hz` bands. With the $dt = 2s$ sampling time, the total number of data points in time segments of 2 sideral day long is `N=86164`. For lower frequencies (`10-475 Hz`, see [documents and publications](../polgraw-allsky/articles)) 6 day length segments are used (`N=258492` double-precision numbers).
 
 
@@ -115,21 +113,19 @@ C compiler and standard libraries (`math.h`, `sys/time.h` for `gettimeofday`). T
 
 ### Compilation  
 
-```bash 
+```
 % gcc gauss-xdat.c -o gauss-xdat -lm -lgsl -lgslcblas
 ```
 
 ### Example
 
 The program takes input values from the command line: 
-```bash 
+```
 % ./gauss-xdat N amplitude sigma output-file 
 ```
 e.g., 
 
-```bash 
+```
 % ./gauss-xdat 86164 1 1 ../../../testdata/2d_0.25/001/H1/xdatc_001_1234.bin
 ```
 The output is a binary file containing `N` double-precision numbers. 
-
-
