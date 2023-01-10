@@ -65,19 +65,19 @@ mkdocs serve -v
 This should start a local webserver at address `http://127.0.0.1:8000/`. Check it in the web browser.
 The pages will regenerate and reload autonatically if there are any changes.
 
-After testing if the pages are working locally you can submit changes to master
+After testing if the pages are working locally you can submit changes to master branch
 ```
-git add <some files>]
+git add <some files>
 git commit -a -m "[docs] something"
 git push
 ```
 
 Now you can go to the [repository actions](https://github.com/Polgraw/TDFstat/actions)
-and observe build action progress.
-
-In case we want manual push in future, we need to change in Github settings for Pages to 'source: none branch' and then we can push the generated site to gh-pages branch:
+and observe two build actions being executed.
+The first one is building mkdocs site and pushing output to gh-pages branch.
+This action is defined in [this yml file](https://github.com/Polgraw/TDFstat/blob/main/.github/workflows/main.yml).
+Alternativelly, you can achive the same manually from your local testing environment:
 ```
 mkdocs gh-deploy
 ```
-
-test2
+The second action does deployment of html code to `https://polgraw.github.io/TDFstat`.
