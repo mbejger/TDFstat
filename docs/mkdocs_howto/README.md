@@ -80,3 +80,4 @@ In case we want manual push in future, we need to change in Github settings for 
 mkdocs gh-deploy
 ```
 
+test
