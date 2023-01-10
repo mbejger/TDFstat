@@ -5,6 +5,8 @@ It is authored by members of the [Polgraw group](https://polgraw.camk.edu.pl/) w
 
 See the [documentation page](https://polgraw.github.io/TDFstat/) for more details.
 
+> :warning: Repository under construction! We are moving here from [the old repository](https://github.com/mbejger/polgraw-allsky).
+
 ## Contributors
 
 In alphabetic order: 
