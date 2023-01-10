@@ -71,10 +71,11 @@ git add <some files>]
 git commit -a -m "[docs] something"
 git push
 ```
-and then push the generated site to gh-pages branch
+
+Now you can go to the [repository actions](https://github.com/Polgraw/TDFstat/actions)
+and observe build action progress.
+
+In case we want manual push in future, we need to change in Github settings for Pages to 'source: none branch' and then we can push the generated site to gh-pages branch:
 ```
 mkdocs gh-deploy
 ```
-
-
-
