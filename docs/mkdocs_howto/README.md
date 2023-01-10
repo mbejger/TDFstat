@@ -69,7 +69,7 @@ After testing if the pages are working locally you can submit changes to master 
 ```
 git add <some files>
 git commit -a -m "[docs] something"
-git push
+git push origin main
 ```
 
 Now you can go to the [repository actions](https://github.com/Polgraw/TDFstat/actions)
