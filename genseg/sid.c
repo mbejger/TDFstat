@@ -31,6 +31,8 @@ double gps2mjd (double tgps) {
  2006 JAN  1 =JD 2453736.5  TAI-UTC=  33.0       S + (MJD - 41317.) X 0.0      S
  2009 JAN  1 =JD 2454832.5  TAI-UTC=  34.0       S + (MJD - 41317.) X 0.0      S
  2012 JUL  1 =JD 2456109.5  TAI-UTC=  35.0       S + (MJD - 41317.) X 0.0      S
+ 2015 JUL  1 =JD 2457204.5  TAI-UTC=  36.0       S + (MJD - 41317.) X 0.0      S 
+ 2017 JAN  1 =JD 2457754.5  TAI-UTC=  37.0       S + (MJD - 41317.) X 0.0      S 
 
   To update, add the mjd value of the new leapseconds, computed with
         t=s2mjd('1-jul-1981')
@@ -39,6 +41,10 @@ double gps2mjd (double tgps) {
  Part of Snag toolbox - Signal and Noise for Gravitational Antennas
  Copyright (C) 1999  Sergio Frasca - sergio.frasca@roma1.infn.it
  Department of Physics - Universita` "La Sapienza" - Rome
+
+ See: 
+ https://www.nist.gov/pml/time-and-frequency-division/time-realization/leap-seconds
+
   */
 
   double leaptimes[] = {
@@ -58,6 +64,8 @@ double gps2mjd (double tgps) {
     53736,
     54832,
     56109,
+    57204,
+    57754,
     99999,
     /* the above line added by K.Borkowski to make the procedure */
     /* work for dates after the last leap second */
@@ -65,7 +73,7 @@ double gps2mjd (double tgps) {
     0,
     0
   };
-  int i, nleap = 17;
+  int i, nleap = 19;
   double t0 = 44244.;
   double t;
 
