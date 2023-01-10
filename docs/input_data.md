@@ -51,7 +51,7 @@ J0034+1612_2010-10-10.list
 ```
 
 
-## `gen2day` description
+## `genseg` description
 
 *TODO* For the implementation see [here](https://github.com/mbejger/polgraw-allsky/tree/master/gen2day). 
 
