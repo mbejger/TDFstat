@@ -81,3 +81,10 @@ Alternativelly, you can achive the same manually from your local testing environ
 mkdocs gh-deploy
 ```
 The second action does deployment of html code to `https://polgraw.github.io/TDFstat`.
+
+----
+
+Possible improvements:
+
+- https://datamattsson.tumblr.com/post/612351271067893760/the-perfect-documentation-storm
+- https://github.com/marketplace/actions/deploy-mkdocs
