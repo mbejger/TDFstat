@@ -1,6 +1,5 @@
 ---
 title: Input data generation
-nav_order: 2
 ---
 
 # Input data generation
