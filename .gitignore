@@ -1,3 +1,4 @@
 gwsearch-omp*
 *.o
 *~
+site/
