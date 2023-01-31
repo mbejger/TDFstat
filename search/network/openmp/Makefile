@@ -1,5 +1,6 @@
-ARCH = cascadelake # min. required for SLEEF is haswell (AVX2+FMA)
-TARGET = gwsearch-omp-$(ARCH)-test
+# min. required for SLEEF is haswell (AVX2+FMA)
+ARCH = broadwell
+TARGET = gwsearch-omp-$(ARCH)
 
 VER := $(shell git rev-parse HEAD)
 
@@ -26,6 +27,7 @@ LDLIBS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
 
 ifeq ($(strip $(SINCOS)),SLEEF)
 SPATH = lib/sleef-3.5.1
+# supported options are: USE_AVX2 , USE_AVX512 , USE_AVX2_SINCOS
 CFLAGS  += -DUSE_AVX2 -I$(SPATH)/include
 LDFLAGS += -L$(SPATH)/lib64
 LDLIBS += -lsleef
