@@ -262,13 +262,26 @@ int main (int argc, char *argv[]) {
 
 	  Xin_array = (fftw_complex *) fftw_malloc (n*lfft*sizeof (fftw_complex));
 	  Xout_array = (fftw_complex *) fftw_malloc (n*lfft*sizeof (fftw_complex));
+	  int lfft2 = lfft/2; // we can assume that lfft is even
 	  for (i=0; i<n; i++) {
-	       memcpy (Xin_array+i*lfft, rdt+i*lfft, lfft/2*sizeof (fftw_complex));
-	       //memset (Xin_array+(2*i+1)*lfft/2, 0, lfft/2*sizeof (fftw_complex));
-	       memset (Xin_array+(i*lfft+lfft/2+1), 0, (lfft/2-1)*sizeof (fftw_complex));
+#undef USE_ANALYTIC_SIGNAL
+#ifdef USE_ANALYTIC_SIGNAL
+	      // old (analytic form)
+	      memcpy (Xin_array+i*lfft, rdt+i*lfft, lfft/2*sizeof (fftw_complex));
+	      memset (Xin_array+i*lfft+lfft/2, 0, lfft/2*sizeof (fftw_complex));
+#else
+	      // new (full fft of the real signal)
+	      memcpy (Xin_array+i*lfft, rdt+i*lfft, lfft/2*sizeof (fftw_complex));
+	      Xin_array[i*lfft+lfft2][0] = Xin_array[i*lfft+lfft2-1][0];
+	      Xin_array[i*lfft+lfft2][1] = 0.;
+	      for (j=1; j<lfft2; ++j) {
+		  Xin_array[i*lfft+lfft2+j][0] = Xin_array[i*lfft+lfft2-j][0];
+		  Xin_array[i*lfft+lfft2+j][1] = -Xin_array[i*lfft+lfft2-j][1];
+	      }
+#endif
 	  }
 
-#if 1
+#if USE_ANALYTIC_SIGNAL
 	  for (i=0; i<n; i++)
 	      for (j=1; j<lfft/2; j++) {
 		  Xin_array[i*lfft+j][0] *= 2. ;
