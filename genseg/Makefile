@@ -10,7 +10,8 @@ FFTW_DIR = /opt/fftw/3.3.10-gcc9-mvapich2.2
 CFLAGS = -Wall $(LAL_FLAGS) $(INIPARSER_FLAGS) -O2 -DDEBUG
 # debug flags below
 #CFLAGS = -Wall $(LAL_FLAGS) $(INIPARSER_FLAGS) -DDEBUG -g
-LOADLIBES = -static -lfftw3 -lgsl -lgslcblas $(INIPARSER_LIBS) \
+LOADLIBES = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
+	    -static -lfftw3 -lgsl -lgslcblas $(INIPARSER_LIBS) \
 	    -Wl,-Bdynamic -lc -lm  $(LAL_LIBS) 
 
 .PHONY:	iniparser
