@@ -1,7 +1,7 @@
 CC = gcc
-#LAL_FLAGS = -DUSE_LAL -I/usr/share/lalpulsar/include -I/usr/include/lal/include
+#LAL_FLAGS = -DUSE_LAL -I$(CONDA_PREFIX)/include
 LAL_FLAGS = 
-#LAL_LIBS = -llalpulsar -L/usr/share/lalpulsar/lib
+#LAL_LIBS = -L$(CONDA_PREFIX)/lib   -llalpulsar -llalsupport -llalmetaio -llal
 LAL_LIBS =
 INIPARSER_DIR = ../utils/iniparser
 INIPARSER_FLAGS = -I$(INIPARSER_DIR)/src
@@ -11,8 +11,8 @@ CFLAGS = -Wall $(LAL_FLAGS) $(INIPARSER_FLAGS) -O2 -DDEBUG
 # debug flags below
 #CFLAGS = -Wall $(LAL_FLAGS) $(INIPARSER_FLAGS) -DDEBUG -g
 LOADLIBES = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
-	    -static -lfftw3 -lgsl -lgslcblas $(INIPARSER_LIBS) \
-	    -Wl,-Bdynamic -lc -lm  $(LAL_LIBS) 
+	    -static -lfftw3 -lgsl -lgslcblas  $(INIPARSER_LIBS) $(LAL_LIBS) \
+	    -Wl,-Bdynamic -lc -lm -lz -lpthread
 
 .PHONY:	iniparser
 
@@ -25,7 +25,7 @@ genseg:	genseg.o GrubbsOutliers.o get_barycenter.o sid.o
 	$(CC) -o genseg  $^ $(LOADLIBES)
 
 laltest: laltest.o get_barycenter.o sid.o
-	$(CC) -o laltest $^ $(LAL_LIBS)
+	$(CC) -o laltest $^ $(LOADLIBES)
 
 clean:
 	rm -f *.o genseg laltest
