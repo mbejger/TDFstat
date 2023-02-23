@@ -38,8 +38,9 @@ Detectors get_detector (char *);
 
 int get_barycenter (double, Detectors, EphemerisData *,	\
 		    double *, double *, double, int);
-Detectors get_detector (char *);
-int get_position (Detectors, double *);
-double gps2mjd (double);
-double sid (double, double);
 
+int get_position (Detectors, double *);
+
+double gps2mjd (double);
+
+double sid (double, double);

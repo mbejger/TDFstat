@@ -12,7 +12,7 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
-int GrubbsOutliersMany (double *, double *, int, int, double, char *);
+int GrubbsOutliersMany (double *, double *, int, int, double, const char *);
 #include "iniparser.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
@@ -46,9 +46,9 @@ int GrubbsOutliersMany (double *, double *, int, int, double, char *);
 
 int main (int argc, char *argv[]) {
      FILE *data, *td_stream;
-     char inp[MAX_LINE], buf[MAX_LINE], td_fname[MAX_LINE],		\
-	  tdc_fname[MAX_LINE], td_dir[MAX_LINE], ini_fname[MAX_LINE],	\
-	  date_fname[MAX_LINE], sft_fname[MAX_LINE];
+     char inp[MAX_LINE], buf[MAX_LINE], td_fname[MAX_LINE+32],		\
+	  tdc_fname[MAX_LINE+32], td_dir[MAX_LINE], ini_fname[MAX_LINE],	\
+	  date_fname[MAX_LINE+16], sft_fname[MAX_LINE];
      double fpo, tmp1, tmp2, gpsd, gpsd1, gpsdn, gps1, *gpsdv, *gpsd1v,	\
 	  gpsdRest = 0;
      int N, lfft, lfftr, lfftm, lenx, ldat, n, i, j, yndx, notempty, \
@@ -61,8 +61,8 @@ int main (int argc, char *argv[]) {
      fftw_plan plan;
      struct stat st = {0};
      dictionary *ini;
-     char *site, *plsr, *DataDir, *SftDir, *flsum, *fnptr,	\
-	  *tptr, *flnames[MAX_FILES], *segments_fname, *out_replace ;
+     const char *site, *plsr, *DataDir, *SftDir, *flsum, *out_replace, *segments_fname;
+     char *fnptr, *tptr, *flnames[MAX_FILES];
      
      double mingps=0., maxgps=0.;
      double start, end;
@@ -70,8 +70,8 @@ int main (int argc, char *argv[]) {
      
 #ifdef USE_LAL
      int gen_eph;
-     char *EphDir, *efile, *sfile, eFname[MAX_LINE], sFname[MAX_LINE],	\
-	  eph_fname[MAX_LINE];
+     const char *EphDir, *efile, *sfile;
+     char eFname[MAX_LINE], sFname[MAX_LINE], eph_fname[MAX_LINE+32];
      double *DetSSB, *rDet, *rSSB, mjd1, phir, elam = 0, position[4];
      EphemerisData *edat = NULL;
      Detectors detector = 0;
@@ -160,7 +160,7 @@ int main (int argc, char *argv[]) {
 #ifdef USE_LAL
      gen_eph = iniparser_getboolean (ini, "general:ephemeris", 0);
      if (gen_eph) {
-	  detector = get_detector (site);
+	 detector = get_detector ((char *)site);
 	  get_position (detector, position);
 	  elam = position[1];
 	  fprintf (stderr, "Detector ephemeris for %s will be created\n",	names[detector]);
@@ -182,7 +182,7 @@ int main (int argc, char *argv[]) {
      if (startgps != 0) gpsdRest = startgps; 
      printf (" startgps = %15.5f gpsdRest = %15.5f\n", startgps, gpsdRest);
 
-     fnptr = flsum;
+     fnptr = (char *)flsum;
      while (*fnptr != '\0') {
 	  flnames[nfiles] = (char *) malloc (MAX_LINE);
 	  sprintf (flnames[nfiles], "%s_", plsr);

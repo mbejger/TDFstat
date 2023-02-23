@@ -21,7 +21,7 @@ int get_barycenter (double, Detectors, EphemerisData *,	\
 int main (int argc, char *argv[]) {
   double gps1 = 1.1260846080e+09;  /* 010 O1 */
   double dt = 2.0;
-  double bandwidth;
+  //double bandwidth;
   char name[] = "L1";
   double position[4], mjd1, phir, elam;
   Detectors detector;
@@ -45,7 +45,7 @@ int main (int argc, char *argv[]) {
   phir = sid (mjd1, elam);
   fprintf (stderr, "mjd = %f\nphir = %f\n", mjd1, phir);
   edat = XLALInitBarycenter (efile, sfile);
-  bandwidth = 1/(2*dt);
+  //bandwidth = 1/(2*dt);
   get_barycenter (gps1, L1, edat, DetSSB, rDet, dt, N); //here also change detector name
   DetSSB[3*N] = phir;
   DetSSB[3*N+1] = EPSILON;
