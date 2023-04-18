@@ -465,7 +465,7 @@ int job_core(int pm,                   // Hemisphere
     
     /* Spindown loop  */
 
-    for(ss=smin; ss<=smax; ss += s_stride) {
+  for(ss=smin; ss<=smax; ss += s_stride) {
 
 #if TIMERS>2
       tstart = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
@@ -489,7 +489,7 @@ int job_core(int pm,                   // Hemisphere
       spindown_modulation(sett->nifo, sett->N, het1, sgnlt, _tmp1, fxa, fxb);
 
       // Zero-padding
-#pragma omp parallel for schedule(static) shared(fxa, fxb)
+#pragma omp parallel for schedule(static)
       for(i = sett->fftpad*sett->nfft-1; i > sett->N-1; --i)
 	  fxa[i] = fxb[i] = 0.;
 
@@ -497,7 +497,7 @@ int job_core(int pm,                   // Hemisphere
       fftw_execute_dft(plans->plan, fxb, fxb);
 
       // Computing F-statistic
-#pragma omp parallel for schedule(static) default(shared)
+#pragma omp parallel for schedule(static)
       for (i=sett->nmin; i<sett->nmax; ++i) {
 	F[i] = (sqr(creal(fxa[i])) + sqr(cimag(fxa[i])))/aa +
 	       (sqr(creal(fxb[i])) + sqr(cimag(fxb[i])))/bb;

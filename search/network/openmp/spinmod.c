@@ -50,8 +50,8 @@ static void vstore_v_p_vd(double *ptr, vdouble v) { _mm256_store_pd(ptr, v); }
 #endif
 
 
-void spindown_modulation(int nifo, int N,
-			 double het1, double *sgnlt, double _tmp1[][N],
+void spindown_modulation(const int nifo, const int N,
+			 const double het1, const double *sgnlt, const double _tmp1[][N],
 			 fftw_complex *fxa, fftw_complex *fxb) {
   int i, j, n;
   

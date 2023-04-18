@@ -1,5 +1,5 @@
 # min. required for SLEEF is haswell (AVX2+FMA)
-ARCH = broadwell
+ARCH = cascadelake
 TARGET = gwsearch-omp-$(ARCH)
 
 VER := $(shell git rev-parse HEAD)
