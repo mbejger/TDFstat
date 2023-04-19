@@ -25,7 +25,7 @@ void lin2ast (double be1, double be2, int pm, double sepsm, double cepsm,
 } /* lin2ast() */
 
 
-int ast2lin (FLOAT_TYPE alfa, FLOAT_TYPE delta, double epsm, double *be) {
+int ast2lin (double alfa, double delta, double epsm, double *be) {
 
   /* alfa - right ascension [rad]
      delta - declination [rad]

@@ -450,10 +450,10 @@ int job_core(int pm,                   // Hemisphere
   printf ("\n>>%d\t%d\t%d\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
 
   static fftw_complex *fxa, *fxb;
+  fxa = fftw_arr->fxa;
+  fxb = fftw_arr->fxb;
+
   static double *F;
-  
-  if (!fxa) fxa = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
-  if (!fxb) fxb = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
   if (!F) F = (double *)malloc(2*sett->nfft*sizeof(double));
   
   //private loop counter: ss
@@ -490,7 +490,7 @@ int job_core(int pm,                   // Hemisphere
 
       // Zero-padding
 #pragma omp parallel for schedule(static)
-      for(i = sett->fftpad*sett->nfft-1; i > sett->N-1; --i)
+      for(i = sett->nfftf-1; i > sett->N-1; --i)
 	  fxa[i] = fxb[i] = 0.;
 
       fftw_execute_dft(plans->plan, fxa, fxa);
@@ -506,7 +506,6 @@ int job_core(int pm,                   // Hemisphere
 
       (*FNum)++;
 
-      
 #undef FSTATDEB
 #ifdef FSTATDEB
       // warning: use with nthreads=1

@@ -61,6 +61,7 @@ typedef struct _signals {
 typedef struct _fftw_arrays {
 
   fftw_complex *xa, *xb;
+  fftw_complex *fxa, *fxb;
   int arr_len;
   
 } FFTW_arrays;
