@@ -202,8 +202,9 @@ int job_core(int pm,                   // Hemisphere
 
   int i, j, n;
   int smin = s_range->sst, smax = s_range->spndr[1];
-  double al1, al2, sinalt, cosalt, sindelt, cosdelt, sgnlt[NPAR], 
-    nSource[3], het0, sgnl0, ft;
+  double al1, al2, sinalt, cosalt, sindelt, cosdelt, 
+    nSource[3], ft, het0;
+  double sgnlt[NPAR], sgnl0;
   double _tmp1[sett->nifo][sett->N] __attribute__((aligned(128)));
   /*
   static double **_tmp1;
@@ -545,7 +546,7 @@ int job_core(int pm,                   // Hemisphere
 	} // while i
 
 	// Candidate signal frequency
-	sgnlt[0] = 2.*M_PI*ii/((FLOAT_TYPE)sett->fftpad*sett->nfft) + sgnl0;
+	sgnlt[0] = 2.*M_PI*(FLOAT_TYPE)ii/(FLOAT_TYPE)sett->nfftf + sgnl0;
 	  
 	// Checking if signal is within a known instrumental line 
 	int k, veto_status = 0; 
