@@ -15,10 +15,11 @@
 #include <gsl/gsl_eigen.h>
 #include <time.h>
 
-#include "init.h"
-#include "struct.h"
-#include "settings.h"
 #include "auxi.h"
+#include "struct.h"
+#include "init.h"
+#include "settings.h"
+
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -889,12 +890,18 @@ void plan_fftw(
 
 #if defined(_OPENMP)
   fftw_init_threads();
+  fftw_plan_with_nthreads(omp_get_max_threads());
+#ifdef COMP_FLOAT
+  fftwf_init_threads();
+  FFTW_PRE(_plan_with_nthreads)(omp_get_max_threads());
+#endif
 #endif
   
   gethostname(hostname, 128);
   sprintf (wfilename, "wisdom-%s.dat", hostname);
   if((wisdom = fopen (wfilename, "r")) != NULL) {
-    fftw_import_wisdom_from_file(wisdom);
+    //fftw_import_wisdom_from_file(wisdom);
+    //if (fftwf_import_wisdom_from_file(wisdom) == 0 ) exit(1);
     fclose (wisdom);
   }
 
@@ -912,26 +919,29 @@ void plan_fftw(
   printf("[fft plans] arr_len=%d   nfft=%d   fftpad=%d  Ninterp=%d\n",
 	 fftw_arr->arr_len, sett->nfft, sett->fftpad, sett->Ninterp);
 
-#if defined(_OPENMP)
-  fftw_plan_with_nthreads(omp_get_max_threads());
-#endif
+  printf("double plans...");
   // Change FFTW_MEASURE to FFTW_PATIENT for more optimized plan
   plans->pl_int = fftw_plan_dft_1d(sett->nfft, fftw_arr->xa, fftw_arr->xa,
-				   FFTW_FORWARD, FFTW_MEASURE);
+				   FFTW_FORWARD, FFTW_ESTIMATE);
   plans->pl_inv = fftw_plan_dft_1d(sett->Ninterp, fftw_arr->xa, fftw_arr->xa,
-				   FFTW_BACKWARD, FFTW_MEASURE);
+				   FFTW_BACKWARD, FFTW_ESTIMATE);
+  printf("done\n");
 
-  fftw_arr->fxa = (fftw_complex *)fftw_malloc(sett->nfftf*sizeof(fftw_complex));
-  fftw_arr->fxb = (fftw_complex *)fftw_malloc(sett->nfftf*sizeof(fftw_complex));
+  printf("float plans...");
+  fftw_arr->fxa = (FFTW_PRE(_complex) *)FFTW_PRE(_malloc)(sett->nfftf*sizeof(FFTW_PRE(_complex)));
+  fftw_arr->fxb = (FFTW_PRE(_complex) *)FFTW_PRE(_malloc)(sett->nfftf*sizeof(FFTW_PRE(_complex)));
 
-  plans->plan = fftw_plan_dft_1d(sett->nfftf, fftw_arr->fxa, fftw_arr->fxa,
-				 FFTW_FORWARD, FFTW_MEASURE);
-
+  plans->plan = FFTW_PRE(_plan_dft_1d)(sett->nfftf, fftw_arr->fxa, fftw_arr->fxa,
+				       FFTW_FORWARD, FFTW_ESTIMATE);
+  printf("done\n");
 
   // Generates a wisdom FFT file if there is none
   if((wisdom = fopen(wfilename, "r")) == NULL) {
     wisdom = fopen(wfilename, "w");
     fftw_export_wisdom_to_file(wisdom);
+#ifdef COMP_FLOAT    
+    fftwf_export_wisdom_to_file(wisdom);
+#endif    
   }
 
   fclose (wisdom);
@@ -1023,16 +1033,18 @@ void cleanup(
   free(aux->t2);
 	
   fftw_free(fftw_arr->xa);
-	
+  fftw_free(fftw_arr->xb);  
+
   free(sett->M);
 	
-  fftw_destroy_plan(plans->plan);
-  fftw_destroy_plan(plans->plan2);
+  FFTW_PRE(_destroy_plan)(plans->plan);
   fftw_destroy_plan(plans->pl_int);
-  fftw_destroy_plan(plans->pl_int2);
   fftw_destroy_plan(plans->pl_inv);
+  /*
+  fftw_destroy_plan(plans->pl_int2);
   fftw_destroy_plan(plans->pl_inv2);
-
+  fftw_destroy_plan(plans->plan2);
+  */
   fftw_forget_wisdom();
   fftw_cleanup();
 

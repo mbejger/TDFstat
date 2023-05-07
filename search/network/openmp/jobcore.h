@@ -37,11 +37,11 @@ int job_core(
 void spindown_modulation(
 			 const int nifo,
 			 const int N,
-			 const double het1,
-			 const double *sgnlt,
-			 const double _tmp1[][N],     
-			 fftw_complex *fxa,
-			 fftw_complex *fxb 
+			 const FLOAT_TYPE het1,
+			 const FLOAT_TYPE spnd,
+			 const FLOAT_TYPE _tmp1[][N],     
+			 FFTW_PRE(_complex) *fxa,
+			 FFTW_PRE(_complex) *fxb 
 			 );
 
 #endif

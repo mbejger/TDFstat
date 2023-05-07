@@ -14,9 +14,10 @@
 #include <assert.h>
 #include <omp.h>
 
-#include "jobcore.h"
 #include "auxi.h"
+#include "struct.h"
 #include "settings.h"
+#include "jobcore.h"
 #include "timer.h"
 
 
@@ -204,8 +205,8 @@ int job_core(int pm,                   // Hemisphere
   int smin = s_range->sst, smax = s_range->spndr[1];
   double al1, al2, sinalt, cosalt, sindelt, cosdelt, 
     nSource[3], ft, het0;
-  double sgnlt[NPAR], sgnl0;
-  double _tmp1[sett->nifo][sett->N] __attribute__((aligned(128)));
+  FLOAT_TYPE sgnlt[NPAR], sgnl0;
+  FLOAT_TYPE _tmp1[sett->nifo][sett->N] __attribute__((aligned(128)));
   /*
   static double **_tmp1;
   if (!_tmp1) {
@@ -401,7 +402,7 @@ int job_core(int pm,                   // Hemisphere
   } // end of detector loop 
 
   // square sums of modulation factors 
-  double aa = 0., bb = 0.; 
+  FLOAT_TYPE aa = 0., bb = 0.;
 
   for(n=0; n<sett->nifo; ++n) {
 
@@ -412,13 +413,13 @@ int job_core(int pm,                   // Hemisphere
       bbtemp += sqr(ifo[n].sig.bb[i]);
     }
 
+    aa += aatemp/ifo[n].sig.sig2; 
+    bb += bbtemp/ifo[n].sig.sig2;   
+
     for(i=0; i<sett->N; ++i) {
       ifo[n].sig.xDatma[i] /= ifo[n].sig.sig2;
       ifo[n].sig.xDatmb[i] /= ifo[n].sig.sig2;
     }
-
-    aa += aatemp/ifo[n].sig.sig2; 
-    bb += bbtemp/ifo[n].sig.sig2;   
   }
 
 
@@ -450,12 +451,12 @@ int job_core(int pm,                   // Hemisphere
   int s_stride = 1;
   printf ("\n>>%d\t%d\t%d\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
 
-  static fftw_complex *fxa, *fxb;
+  static FFTW_PRE(_complex) *fxa, *fxb;
   fxa = fftw_arr->fxa;
   fxb = fftw_arr->fxb;
 
-  static double *F;
-  if (!F) F = (double *)malloc(2*sett->nfft*sizeof(double));
+  static FLOAT_TYPE *F;
+  if (!F) F = (FLOAT_TYPE *)malloc(2*sett->nfft*sizeof(FLOAT_TYPE));
   
   //private loop counter: ss
   //private (declared inside): ii,Fc,het1,k,veto_status,a,v,_p,_c,_s,status
@@ -469,13 +470,15 @@ int job_core(int pm,                   // Hemisphere
   for(ss=smin; ss<=smax; ss += s_stride) {
 
 #if TIMERS>2
-      tstart = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
+    //tstart = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
+      tstart = get_current_time(CLOCK_MONOTONIC);
 #endif 
       
       // Spindown parameter
+      //FLOAT_TYPE spnd = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
       sgnlt[1] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
 
-      double het1;
+      FLOAT_TYPE het1;
       
 #ifdef VERBOSE
       //print a 'dot' every new spindown
@@ -487,24 +490,22 @@ int job_core(int pm,                   // Hemisphere
 
       sgnl0 = het0 + het1;
 
-      spindown_modulation(sett->nifo, sett->N, het1, sgnlt, _tmp1, fxa, fxb);
+      spindown_modulation(sett->nifo, sett->N, het1, sgnlt[1], _tmp1, fxa, fxb);
 
-      // Zero-padding
+      // Zero-padding]
 #pragma omp parallel for schedule(static)
       for(i = sett->nfftf-1; i > sett->N-1; --i)
-	  fxa[i] = fxb[i] = 0.;
+	fxa[i] = fxb[i] = (FLOAT_TYPE)0.;
 
-      fftw_execute_dft(plans->plan, fxa, fxa);
-      fftw_execute_dft(plans->plan, fxb, fxb);
+      FFTW_PRE(_execute_dft)(plans->plan, fxa, fxa);
+      FFTW_PRE(_execute_dft)(plans->plan, fxb, fxb);
 
       // Computing F-statistic
 #pragma omp parallel for schedule(static)
-      for (i=sett->nmin; i<sett->nmax; ++i) {
-	F[i] = (sqr(creal(fxa[i])) + sqr(cimag(fxa[i])))/aa +
-	       (sqr(creal(fxb[i])) + sqr(cimag(fxb[i])))/bb;
+      for (i=sett->nmin; i<sett->nmax; ++i){
+	F[i] = NORM(fxa[i])/aa + NORM(fxb[i])/bb ;
       }
-
-
+      
       (*FNum)++;
 
 #undef FSTATDEB
@@ -535,8 +536,8 @@ int job_core(int pm,                   // Hemisphere
 
       for(i=sett->nmin; i<sett->nmax; ++i) {
 	if (F[i] < opts->trl) continue;
-	double Fc; int ii;
-	ii = i;
+	FLOAT_TYPE Fc;
+	int ii = i;
 	Fc = F[i];
 	while (++i < sett->nmax && F[i] > opts->trl) {
 	  if(F[i] > Fc) {
@@ -559,12 +560,12 @@ int job_core(int pm,                   // Hemisphere
 
 	if(!veto_status) {
 	  // Signal-to-noise ratio
-	  sgnlt[4] = sqrt(2.*(Fc - sett->nd));
+	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
 
 	  (*sgnlc)++; // increase found number
 	  // Add new parameters to output array 
 	  for (j=0; j<NPAR; ++j)    // save new parameters
-	    sgnlv[NPAR*(*sgnlc-1)+j] = (FLOAT_TYPE)sgnlt[j];
+	    sgnlv[NPAR*(*sgnlc-1)+j] = sgnlt[j];
 	  
 #ifdef VERBOSE
 	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
@@ -575,7 +576,8 @@ int job_core(int pm,                   // Hemisphere
 
       
 #if TIMERS>2
-      tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
+      //tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
+      tend = get_current_time(CLOCK_MONOTONIC);
       spindown_timer += get_time_difference(tstart, tend);
       spindown_counter++;
 #endif

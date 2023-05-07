@@ -1,37 +1,62 @@
-# min. required for SLEEF is haswell (AVX2+FMA)
+# arch to compile for; min. required for SLEEF is haswell (AVX2+FMA)
 ARCH = cascadelake
-TARGET = gwsearch-omp-$(ARCH)
 
-VER := $(shell git rev-parse HEAD)
+# SIMD = [AVX2, AVX512, NONE] ; explicit optimizations with SIMD instructions.
+# SIMD=NONE implies usege of sincos function, otherwise the SLEEF library is used.
+# It does not affect SIMD optimizations by compiler and FFTW3 dispatchers.
+SIMD = AVX2
+# legacy option: USE_AVX2_SINCOS 
 
-# FFTW_DIR - fftw location
+# PREC = [FLOAT, DOUBLE] precission used in the spindown loop and for output
+PREC = FLOAT
+
 FFTW_DIR = /opt/fftw/3.3.10-gcc9-mvapich2.2
 #FFTW_DIR = $(CONDA_PREFIX)
-SINCOS = SLEEF #SLEEF or GNUSINCOS
+
+#-------------------- EDIT BELOW WITH CAUTIN --------------
+ifeq ($(strip $(SIMD)), NONE)
+	PERF = sincos-${PREC}
+	SINCOS = GNUSINCOS
+	VCFLAGS =
+	VLDFLAGS =
+	VLIBS =
+else
+	PERF = ${SIMD}-${PREC}
+	SINCOS = SLEEF
+	SPATH = lib/sleef-3.5.1
+	VCFLAGS  = -DUSE_${SIMD} -I$(SPATH)/include
+	VLDFLAGS = -L$(SPATH)/lib64
+	VLIBS = -lsleef
+endif
+ifeq ($(strip $(PREC)), FLOAT)
+	FFTW_FLOAT_LIBS = -lfftw3f -lfftw3f_omp
+else
+	FFTW_FLOAT_LIBS =
+endif
+
+TARGET = gwsearch-${ARCH}-$(shell echo $(PERF) | tr A-Z a-z)
+
+VER := $(shell git rev-parse HEAD)
 
 CC = gcc -std=gnu11 -static-libgcc -fopenmp #-flto
 #-flto ?? speeds up a little for AVX512 but slows down for AVX2 
 
-# pre-processor flags: TIMERS, VERBOSE (rich stdout output)
-CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=1 -D$(SINCOS) -UUSE_LOCKING #-DVERBOSE 
+# TIMERS=1 measure total time, TIMERS=3 measure spindown loop time
+# PREFIX is the default output directory
+CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=3 -D$(SINCOS) -UUSE_LOCKING  -DCOMP_${PREC} ${VCFLAGS}  #-DVERBOSE 
 CFLAGS += -I$(FFTW_DIR)/include 
 CFLAGS += -g -Wall -Wno-unused \
-	  -O3 -funsafe-loop-optimizations -funroll-loops -ffast-math \
+	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops \
 	  -march=$(ARCH) -mtune=$(ARCH)
 
-LDFLAGS = -L$(FFTW_DIR)/lib
+#	  -O3 -funsafe-loop-optimizations -funroll-loops -ffast-math \
+
+LDFLAGS = -L$(FFTW_DIR)/lib ${VLDFLAGS}
 
 LDLIBS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
-	 -static -lfftw3 -lfftw3_omp -lgsl -lgslcblas \
+	 -static -lfftw3 -lfftw3_omp $(FFTW_FLOAT_LIBS) ${VLIBS} -lgsl -lgslcblas \
 	 -Wl,-Bdynamic -lc -lm -lrt
 
-ifeq ($(strip $(SINCOS)),SLEEF)
-SPATH = lib/sleef-3.5.1
-# supported options are: USE_AVX2 , USE_AVX512 , USE_AVX2_SINCOS
-CFLAGS  += -DUSE_AVX2 -I$(SPATH)/include
-LDFLAGS += -L$(SPATH)/lib64
-LDLIBS += -lsleef
-endif
 
 
 all: veclib $(TARGET)

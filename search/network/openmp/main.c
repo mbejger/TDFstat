@@ -15,8 +15,8 @@
 #include <dirent.h>
 #include <signal.h>
 
-#include "struct.h"
 #include "auxi.h"
+#include "struct.h"
 #include "settings.h"
 #include "jobcore.h"
 #include "init.h"

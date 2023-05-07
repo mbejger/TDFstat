@@ -61,14 +61,13 @@ typedef struct _signals {
 typedef struct _fftw_arrays {
 
   fftw_complex *xa, *xb;
-  fftw_complex *fxa, *fxb;
+  FFTW_PRE(_complex) *fxa, *fxb;
   int arr_len;
   
 } FFTW_arrays;
 
 
-  /* Search range
-   */ 
+  /* Search range  */ 
 
 typedef struct _search_range {
   int pmr[2], mr[2], nr[2], spndr[2];
@@ -76,21 +75,19 @@ typedef struct _search_range {
 } Search_range;
 
 
-  /* FFTW plans
-   */ 
+  /* FFTW plans  */ 
 
 typedef struct _fftw_plans {
-  fftw_plan plan,    // main plan
-            pl_int,  // interpolation forward
+  fftw_plan pl_int,  // interpolation forward
             pl_inv;  // interpolation backward
-  fftw_plan plan2,   // main plan
+  FFTW_PRE(_plan) plan;
+  /*  fftw_plan plan2,   // main plan
             pl_int2, // interpolation forward
-            pl_inv2; // interpolation backward
+            pl_inv2; // interpolation backward */
 } FFTW_plans;
 
 
-  /* Auxiluary arrays
-   */ 
+  /* Auxiluary arrays */ 
 
 typedef struct _aux_arrays {
 

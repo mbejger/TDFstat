@@ -294,7 +294,7 @@ void gridr (double *M, int *spndr, int *nr, int *mr, double oms, double Smax) {
   }
 } /* gridr() */
 
-double FStat (double *F, int nfft, int nav, int indx) {
+double FStat (FLOAT_TYPE *F, int nfft, int nav, int indx) {
   /* FStat Smoothed F-statistic */
 
   // input:
@@ -304,7 +304,7 @@ double FStat (double *F, int nfft, int nav, int indx) {
   // indx - block index
 
   int i, j;
-  double mu, *fr, pxout=100.;
+  FLOAT_TYPE mu, *fr, pxout=100.;
 
   indx /= nav;
   fr = F;

@@ -5,9 +5,9 @@
 #include <dirent.h>
 #include <float.h>
 
-#include "settings.h"
 #include "auxi.h"
 #include "struct.h"
+#include "settings.h"
 #include <glob.h>
 
 

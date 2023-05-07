@@ -8,34 +8,36 @@
 #define TOSTR(x) TOSTRA(x)
 
 #define TINY 1.0e-20
-#define NINTERP 3			 /* degree of the interpolation polynomial */
-							 /* Do not change this value!!! */
+#define NINTERP 3  /* degree of the interpolation polynomial - do not change!!! */
 #define NAVFSTAT 4096
 #define round(x) floor((x)+0.5)
 
-// Define COMP_FLOAT this to change the double/single precision of triggers 
-//
-// #define COMP_FLOAT
-#ifdef COMP_FLOAT // if single-precision
+// Define COMP_FLOAT to switch to single precision of triggers and of fft
+#ifdef COMP_FLOAT
     #define FLOAT_TYPE float
-#else             // if double-precision
+    #define FFTW_PRE(NAME) fftwf ## NAME
+    #define NORM(x) ( crealf(x)*crealf(x) + cimagf(x)*cimagf(x) )
+#else
     #define FLOAT_TYPE double
+    #define FFTW_PRE(NAME) fftw ## NAME
+    #define NORM(x) ( creal(x)*creal(x) + cimag(x)*cimag(x) )
 #endif
 
-void lin2ast(double be1, double be2, int pm, double sepsm, double cepsm,	\
-         double *sinal, double *cosal, double *sindel, double *cosdel);
+void lin2ast(double be1, double be2, int pm, double sepsm, double cepsm,
+	     double *sinal, double *cosal, double *sindel, double *cosdel);
 
-int ast2lin(double alfa, double delta, double epsm, double *be); 
+int ast2lin(double alfa, double delta, double epsm, double *be);
  
 void spline(complex double *, int, complex double *);
 complex double splint (complex double *, complex double *, int, double);
 void splintpad (complex double *, double *, int, int, complex double*);
 void linterp (complex double *, double *, int, int, complex double*);
-void triginterp (complex double *ya, complex double *yb, double *shftf, int N, int nfft, complex double *outa, complex double *outb);
+void triginterp (complex double *ya, complex double *yb, double *shftf,
+		 int N, int nfft, complex double *outa, complex double *outb);
 double var (double *, int);
 
 void gridr (double *, int *, int *, int *, double, double);
-double FStat (double *, int, int, int);
+double FStat (FLOAT_TYPE *, int, int, int);
 
 int ludcmp (double *, int, int *, double *);
 int lubksb (double *, int, int *, double *);
