@@ -73,6 +73,7 @@ void search_settings(Search_settings* sett) {
   sett->Smax=Smax;    	// maximum spindown
   sett->nd=nd;        	// degrees of freedom
   sett->interpftpad=interpftpad;
+  sett->bufsize=4*sett->nfft; // buffer size for triggers = 2 * F_size
 
   // Because of frequency-domain filters, we search
   // F-statistic in range (nmin+1, nmax) of data points

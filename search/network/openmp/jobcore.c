@@ -68,7 +68,7 @@ void search(
 #endif
   
   // Allocate buffer for triggers
-  sgnlv = (FLOAT_TYPE *)calloc(NPAR*2*sett->nfft, sizeof(FLOAT_TYPE));
+  sgnlv = (FLOAT_TYPE *)calloc(NPAR*sett->bufsize, sizeof(FLOAT_TYPE));
 
   // open mode for trig file
   int tmode = O_WRONLY|O_CREAT|O_APPEND;
@@ -111,7 +111,7 @@ void search(
 
 	/* Add trigger parameters to a file */
 	// if enough signals found (no. of signals > half length of buffer)
-	if (sgnlc > sett->nfft || save_state == 1) {
+	if (sgnlc > sett->bufsize/2 || save_state == 1) {
 	     if((fd = open (outname, tmode, S_IRUSR|S_IWUSR|S_IRGRP)) < 0) {
 		  perror(outname);
 		  return;
@@ -290,7 +290,6 @@ int job_core(int pm,                   // Hemisphere
           + nSource[1]*ifo[n].sig.DetSSB[1]
           + nSource[2]*ifo[n].sig.DetSSB[2];
 
-#define CHUNK 64
 #pragma omp parallel default(shared) private(phase,cp,sp,exph)
     {
 #pragma omp for schedule(static)
@@ -529,11 +528,11 @@ int job_core(int pm,                   // Hemisphere
 #endif
 
 
-      double pxout=0.;
-      // Normalize F-statistics 
-      if(!(opts->white_flag))  // if the noise is not white noise
-	   pxout = FStat(F + sett->nmin, sett->nmax - sett->nmin, NAVFSTAT, 0);
-
+      // Normalize F-statistics if the noise is not white noise
+      if(!(opts->white_flag)) {
+	double pxout = FStat(F + sett->nmin, sett->nmax - sett->nmin, NAVFSTAT, 0);
+      }
+      
       for(i=sett->nmin; i<sett->nmax; ++i) {
 	if (F[i] < opts->trl) continue;
 	FLOAT_TYPE Fc;
@@ -553,19 +552,26 @@ int job_core(int pm,                   // Hemisphere
 	int k, veto_status = 0; 
 	for(k=0; k<sett->numlines_band; k++){
 	  if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
-	    veto_status=1; 
+	    veto_status=1;
 	    break; 
 	  }
 	}
 
 	if(!veto_status) {
+	  
+	  //(*sgnlc)++;
+	  if ( *sgnlc >= sett->bufsize ) {
+	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
+	    exit(EXIT_FAILURE);
+	  }
 	  // Signal-to-noise ratio
 	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
 
-	  (*sgnlc)++; // increase found number
-	  // Add new parameters to output array 
-	  for (j=0; j<NPAR; ++j)    // save new parameters
-	    sgnlv[NPAR*(*sgnlc-1)+j] = sgnlt[j];
+	  // Add new parameters to output array
+	  for (j=0; j<NPAR; ++j)
+	    sgnlv[NPAR*(*sgnlc)+j] = sgnlt[j];
+
+	  (*sgnlc)++;
 	  
 #ifdef VERBOSE
 	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
