@@ -532,19 +532,29 @@ int job_core(int pm,                   // Hemisphere
       if(!(opts->white_flag)) {
 	double pxout = FStat(F + sett->nmin, sett->nmax - sett->nmin, NAVFSTAT, 0);
       }
-      
-      for(i=sett->nmin; i<sett->nmax; ++i) {
-	if (F[i] < opts->trl) continue;
-	FLOAT_TYPE Fc;
-	int ii = i;
-	Fc = F[i];
-	while (++i < sett->nmax && F[i] > opts->trl) {
-	  if(F[i] > Fc) {
-	    ii = i;
-	    Fc = F[i];
-	  } // if F[i] 
-	} // while i
 
+
+#if 0
+      double df = 2.*sett->B/sett->nfftf; // frequency resolution of F
+      double dayf = 1./C_SIDDAY;   // 1/day frequency
+      int dayfbins = 1./C_SIDDAY * sett->nfftf/(2*sett->B);  // (1/day) / df
+      int dd = dayfbins-1; // search for maximum in this range
+
+      for(i=sett->nmin; i<sett->nmax; i=i+dd) {
+	
+	FLOAT_TYPE Fc = opts->trl;
+	int ii=-1;
+	for(j=i; j<i+dd; ++j) {
+	  if ( F[j] < opts->trl ) continue;
+	  if ( F[j] > Fc && F[j+1] <= F[j] ) {
+	    ii = j;
+	    Fc = F[j];
+	    j = j+1; // since we already know it can't be j+1
+	  }
+	}
+	
+	if ( ii == -1 ) continue; // no maximum in this block
+	
 	// Candidate signal frequency
 	sgnlt[0] = 2.*M_PI*(FLOAT_TYPE)ii/(FLOAT_TYPE)sett->nfftf + sgnl0;
 	  
@@ -580,6 +590,57 @@ int job_core(int pm,                   // Hemisphere
 	}
       } // for i
 
+#else
+      printf("nie ma mnie tu\n");
+      for(i=sett->nmin; i<sett->nmax; ++i) {
+	
+	if (F[i] < opts->trl) continue;
+	FLOAT_TYPE Fc;
+	int ii = i;
+	Fc = F[i];
+	while (++i < sett->nmax && F[i] > opts->trl) {
+	  if(F[i] > Fc) {
+	    ii = i;
+	    Fc = F[i];
+	  } // if F[i] 
+	} // while i
+	
+
+	// Candidate signal frequency
+	sgnlt[0] = 2.*M_PI*(FLOAT_TYPE)ii/(FLOAT_TYPE)sett->nfftf + sgnl0;
+	  
+	// Checking if signal is within a known instrumental line 
+	int k, veto_status = 0; 
+	for(k=0; k<sett->numlines_band; k++){
+	  if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
+	    veto_status=1;
+	    break; 
+	  }
+	}
+
+	if(!veto_status) {
+	  
+	  //(*sgnlc)++;
+	  if ( *sgnlc >= sett->bufsize ) {
+	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
+	    exit(EXIT_FAILURE);
+	  }
+	  // Signal-to-noise ratio
+	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
+
+	  // Add new parameters to output array
+	  for (j=0; j<NPAR; ++j)
+	    sgnlv[NPAR*(*sgnlc)+j] = sgnlt[j];
+
+	  (*sgnlc)++;
+	  
+#ifdef VERBOSE
+	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
+		  *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
+#endif
+	}
+      } // for i
+#endif
       
 #if TIMERS>2
       //tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
