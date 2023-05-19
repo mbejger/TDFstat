@@ -125,7 +125,8 @@ typedef struct _search_settings {
       fftpad,     // zero padding
       Ninterp, 	  // for resampling (set in plan_fftw() init.c)
       nifo,       // number of detectors
-      bufsize;    // buffer size for triggers
+      bufsize,    // buffer size for triggers
+      dd;         // searching for F maxima (triggers) in blocks of dd size
   
   double *M;      // Grid-generating matrix (or Fisher matrix, 
                   // in case of coincidences) 

@@ -75,6 +75,9 @@ void search_settings(Search_settings* sett) {
   sett->interpftpad=interpftpad;
   sett->bufsize=4*sett->nfft; // buffer size for triggers = 2 * F_size
 
+  sett->Ninterp = sett->interpftpad*sett->nfft; 
+  sett->nfftf = sett->fftpad*sett->nfft;
+
   // Because of frequency-domain filters, we search
   // F-statistic in range (nmin+1, nmax) of data points
   // 
@@ -84,15 +87,24 @@ void search_settings(Search_settings* sett) {
   sett->nmin = sett->fftpad*NAV*sett->B;
   sett->nmax = (sett->nfft/2 - NAV*sett->B)*sett->fftpad;
 
+  
+  double df = 2.*sett->B/sett->nfftf;  // frequency resolution of F
+  double dayf = 1./C_SIDDAY;           // 1/day frequency
+  int dayfbins = 1./C_SIDDAY * sett->nfftf/(2*sett->B);  // (1/day) / df
+  sett->dd = dayfbins-1;         // search for F maximum in blocks of size dd
+  
+
   printf("------------------------ Settings --------------------------\n");
   printf(" B         N            nfft         Fstat_nmin   Fstat_nmax\n");
   printf(" %-9.3f %-12d %-12d %-12d %-12d\n", sett->B, sett->N, sett->nfft, sett->nmin, sett->nmax);
   printf(" fpo       -fdotmin     fdotmax      Smin         -Smax\n");
   printf(" %-9.3f %-12.4e %-12.4e %-12.4e %-12.4e\n", sett->fpo, fdotmin, fdotmax, sett->Smin, sett->Smax);
+  printf(" interpftpad fftpad     dd           NAV\n");
+  printf(" %-11d %-11d %-11d %-11d \n", sett->interpftpad, sett->fftpad, sett->dd, NAV);
   printf("------------------------------------------------------------\n");
-    
+  
   // initial value of number of known instrumental lines in band 
-  sett->numlines_band=0; 
+  sett->numlines_band=0;
 
 } // search settings  
 

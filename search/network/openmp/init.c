@@ -905,8 +905,9 @@ void plan_fftw(
     fclose (wisdom);
   }
 
-  sett->Ninterp = sett->interpftpad*sett->nfft; 
-  sett->nfftf = sett->fftpad*sett->nfft;
+  // moved to settings
+  //sett->Ninterp = sett->interpftpad*sett->nfft; 
+  //sett->nfftf = sett->fftpad*sett->nfft;
 
   // arrays xa,xb are used for in-place interpolation,
   // thus their length is max{fftpad*nfft, Ninterp}

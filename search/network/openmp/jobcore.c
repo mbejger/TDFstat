@@ -534,29 +534,42 @@ int job_core(int pm,                   // Hemisphere
       }
 
 
-#if 0
-      double df = 2.*sett->B/sett->nfftf; // frequency resolution of F
-      double dayf = 1./C_SIDDAY;   // 1/day frequency
-      int dayfbins = 1./C_SIDDAY * sett->nfftf/(2*sett->B);  // (1/day) / df
-      int dd = dayfbins-1; // search for maximum in this range
-
-      for(i=sett->nmin; i<sett->nmax; i=i+dd) {
-	
+#if 1
+      //moved to settings
+      //double df = 2.*sett->B/sett->nfftf; // frequency resolution of F
+      //double dayf = 1./C_SIDDAY;   // 1/day frequency
+      //int dayfbins = 1./C_SIDDAY * sett->nfftf/(2*sett->B);  // (1/day) / df
+      //int dd = dayfbins-1; // search for maximum in this range
+      int dd = sett->dd;
+      j = sett->nmin;
+      for(i=sett->nmin; i<sett->nmax; i+=dd) {
 	FLOAT_TYPE Fc = opts->trl;
 	int ii=-1;
+	while( j < i+dd ){
+	  //if ( F[j] < opts->trl ) {++j; continue;} //not needed because initial fc=trl
+	  if ( F[j] > Fc && F[j+1] < F[j] ) {
+	    ii = j;
+	    Fc = F[j];
+	    j += 2; // since we already know it can't be j+1
+	  } else {
+	    ++j;
+	  }
+	}
+	/* old
 	for(j=i; j<i+dd; ++j) {
 	  if ( F[j] < opts->trl ) continue;
 	  if ( F[j] > Fc && F[j+1] <= F[j] ) {
 	    ii = j;
 	    Fc = F[j];
-	    j = j+1; // since we already know it can't be j+1
+	    ++j; // since we already know it can't be j+1
 	  }
 	}
-	
-	if ( ii == -1 ) continue; // no maximum in this block
+	*/
+	if ( ii < 0 ) continue; // no maximum in this block
 	
 	// Candidate signal frequency
-	sgnlt[0] = 2.*M_PI*(FLOAT_TYPE)ii/(FLOAT_TYPE)sett->nfftf + sgnl0;
+	//sgnlt[0] = 2.*M_PI*(FLOAT_TYPE)ii/(FLOAT_TYPE)sett->nfftf + sgnl0;
+	sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
 	  
 	// Checking if signal is within a known instrumental line 
 	int k, veto_status = 0; 
@@ -574,10 +587,10 @@ int job_core(int pm,                   // Hemisphere
 	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
 	    exit(EXIT_FAILURE);
 	  }
-	  // Signal-to-noise ratio
+	  // SNR ; sqrtf precission is more than enough
 	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
 
-	  // Add new parameters to output array
+	  // Add new parameters to the output buffer array
 	  for (j=0; j<NPAR; ++j)
 	    sgnlv[NPAR*(*sgnlc)+j] = sgnlt[j];
 
@@ -591,7 +604,7 @@ int job_core(int pm,                   // Hemisphere
       } // for i
 
 #else
-      printf("nie ma mnie tu\n");
+      /*  old version  */
       for(i=sett->nmin; i<sett->nmax; ++i) {
 	
 	if (F[i] < opts->trl) continue;
