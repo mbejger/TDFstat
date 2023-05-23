@@ -535,15 +535,20 @@ int job_core(int pm,                   // Hemisphere
 
 
 #if 1
-      //moved to settings
-      //double df = 2.*sett->B/sett->nfftf; // frequency resolution of F
-      //double dayf = 1./C_SIDDAY;   // 1/day frequency
-      //int dayfbins = 1./C_SIDDAY * sett->nfftf/(2*sett->B);  // (1/day) / df
-      //int dd = dayfbins-1; // search for maximum in this range
       int dd = sett->dd;
+      /* find the highest maximum (above trl) in each block of length dd;
+	 dd is set to (1/day frequency in units of F indices)-1,
+	 just below the distance between F-statistic peaks for a signal
+      */
+
+      /*
       j = sett->nmin;
       for(i=sett->nmin; i<sett->nmax; i+=dd) {
-	FLOAT_TYPE Fc = opts->trl;
+	FLOAT_TYPE Fc;
+	if ( F[j-1] > opts->trl)
+	  Fc = F[j-1];
+	else
+	  Fc = opts->trl;
 	int ii=-1;
 	while( j < i+dd ){
 	  //if ( F[j] < opts->trl ) {++j; continue;} //not needed because initial fc=trl
@@ -555,16 +560,21 @@ int job_core(int pm,                   // Hemisphere
 	    ++j;
 	  }
 	}
-	/* old
-	for(j=i; j<i+dd; ++j) {
-	  if ( F[j] < opts->trl ) continue;
-	  if ( F[j] > Fc && F[j+1] <= F[j] ) {
-	    ii = j;
-	    Fc = F[j];
-	    ++j; // since we already know it can't be j+1
-	  }
+      */
+      /* assume that NAV param is non-zero: nmin-1 & nmax+1 exist */
+      for(i=sett->nmin; i<sett->nmax; i+=dd) {
+	int ii=-1;
+	FLOAT_TYPE Fc = opts->trl;
+	for (j=i; j<i+dd; ++j) {
+	  if (F[j] < Fc || F[j-1] > F[j] || F[j] < F[j+1] ) continue;
+	  //if (F[j] < Fc) continue;
+	  //if (F[j-1] > F[j]) continue;
+	  //if (F[j] < F[j+1]) continue;
+	  ii = j;
+	  Fc = F[j];
+	  j++;
 	}
-	*/
+	
 	if ( ii < 0 ) continue; // no maximum in this block
 	
 	// Candidate signal frequency
