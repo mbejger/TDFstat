@@ -28,6 +28,7 @@ else
 	VLDFLAGS = -L$(SPATH)/lib64
 	VLIBS = -lsleef
 endif
+
 ifeq ($(strip $(PREC)), FLOAT)
 	FFTW_FLOAT_LIBS = -lfftw3f -lfftw3f_omp
 else
@@ -49,7 +50,7 @@ CFLAGS += -g -Wall -Wno-unused \
 	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops \
 	  -march=$(ARCH) -mtune=$(ARCH)
 
-#	  -O3 -funsafe-loop-optimizations -funroll-loops -ffast-math \
+
 
 LDFLAGS = -L$(FFTW_DIR)/lib ${VLDFLAGS}
 

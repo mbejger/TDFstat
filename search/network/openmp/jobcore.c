@@ -447,7 +447,7 @@ int job_core(int pm,                   // Hemisphere
   if(opts->s0_flag) smin = smax;
   // if spindown parameter is taken into account, smin != smax
 
-  int s_stride = 1;
+  const int s_stride = 1;
   printf ("\n>>%d\t%d\t%d\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
 
   static FFTW_PRE(_complex) *fxa, *fxb;
@@ -501,7 +501,7 @@ int job_core(int pm,                   // Hemisphere
 
       // Computing F-statistic
 #pragma omp parallel for schedule(static)
-      for (i=sett->nmin; i<sett->nmax; ++i){
+      for (i=sett->nmin; i<=sett->nmax; ++i){
 	F[i] = NORM(fxa[i])/aa + NORM(fxb[i])/bb ;
       }
       
@@ -520,9 +520,12 @@ int job_core(int pm,                   // Hemisphere
 	sprintf(f1name, "fraw-%d.dat", ifile);
 	FILE *f1 = fopen(f1name, "w");
 	for(i=0; i<(sett->nmax-sett->nmin); i++)
-	  fprintf(f1, "%d   %lf   %lf  %lf  %lf  %lf %lf\n", i, fraw[i], 2.*M_PI*i/((double) sett->fftpad*sett->nfft) + sgnl0, 
-		  //	    sqr(creal(fxa[i])), sqr(cimag(fxa[i])), sqr(creal(fxb[i])), sqr(cimag(fxb[i])) );
-		  sqr(creal( ifo[0].sig.xDatma[2*i] )), sqr(cimag(ifo[0].sig.xDatmb[2*i])), sqr(creal(ifo[1].sig.xDatma[2*i])), sqr(cimag(ifo[1].sig.xDatmb[2*i])) );
+	  fprintf(f1, "%d   %lf   %lf  %lf  %lf  %lf %lf\n", i, fraw[i],
+		  2.*M_PI*i/((double) sett->fftpad*sett->nfft) + sgnl0, 
+		  sqr(creal( ifo[0].sig.xDatma[2*i] )),
+		  sqr(cimag(ifo[0].sig.xDatmb[2*i])),
+		  sqr(creal(ifo[1].sig.xDatma[2*i])),
+		  sqr(cimag(ifo[1].sig.xDatmb[2*i])) );
 	fclose(f1);
       }
 #endif
@@ -530,46 +533,24 @@ int job_core(int pm,                   // Hemisphere
 
       // Normalize F-statistics if the noise is not white noise
       if(!(opts->white_flag)) {
-	double pxout = FStat(F + sett->nmin, sett->nmax - sett->nmin, NAVFSTAT, 0);
+	double pxout = FStat(F + sett->nmin, sett->nmax - sett->nmin,
+			     NAVFSTAT, 0);
       }
 
+      /* select triggers */
 
-#if 1
       int dd = sett->dd;
       /* find the highest maximum (above trl) in each block of length dd;
 	 dd is set to (1/day frequency in units of F indices)-1,
 	 just below the distance between F-statistic peaks for a signal
       */
 
-      /*
-      j = sett->nmin;
-      for(i=sett->nmin; i<sett->nmax; i+=dd) {
-	FLOAT_TYPE Fc;
-	if ( F[j-1] > opts->trl)
-	  Fc = F[j-1];
-	else
-	  Fc = opts->trl;
-	int ii=-1;
-	while( j < i+dd ){
-	  //if ( F[j] < opts->trl ) {++j; continue;} //not needed because initial fc=trl
-	  if ( F[j] > Fc && F[j+1] < F[j] ) {
-	    ii = j;
-	    Fc = F[j];
-	    j += 2; // since we already know it can't be j+1
-	  } else {
-	    ++j;
-	  }
-	}
-      */
-      /* assume that NAV param is non-zero: nmin-1 & nmax+1 exist */
-      for(i=sett->nmin; i<sett->nmax; i+=dd) {
+      /* stay in (nmin, nmax) range! */
+      for(i=sett->nmin+1; i<sett->nmax-dd; i+=dd) {
 	int ii=-1;
 	FLOAT_TYPE Fc = opts->trl;
 	for (j=i; j<i+dd; ++j) {
 	  if (F[j] < Fc || F[j-1] > F[j] || F[j] < F[j+1] ) continue;
-	  //if (F[j] < Fc) continue;
-	  //if (F[j-1] > F[j]) continue;
-	  //if (F[j] < F[j+1]) continue;
 	  ii = j;
 	  Fc = F[j];
 	  j++;
@@ -578,7 +559,6 @@ int job_core(int pm,                   // Hemisphere
 	if ( ii < 0 ) continue; // no maximum in this block
 	
 	// Candidate signal frequency
-	//sgnlt[0] = 2.*M_PI*(FLOAT_TYPE)ii/(FLOAT_TYPE)sett->nfftf + sgnl0;
 	sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
 	  
 	// Checking if signal is within a known instrumental line 
@@ -592,12 +572,11 @@ int job_core(int pm,                   // Hemisphere
 
 	if(!veto_status) {
 	  
-	  //(*sgnlc)++;
 	  if ( *sgnlc >= sett->bufsize ) {
 	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
 	    exit(EXIT_FAILURE);
 	  }
-	  // SNR ; sqrtf precission is more than enough
+	  // SNR ; sqrtf precission is suffiecient
 	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
 
 	  // Add new parameters to the output buffer array
@@ -613,57 +592,6 @@ int job_core(int pm,                   // Hemisphere
 	}
       } // for i
 
-#else
-      /*  old version  */
-      for(i=sett->nmin; i<sett->nmax; ++i) {
-	
-	if (F[i] < opts->trl) continue;
-	FLOAT_TYPE Fc;
-	int ii = i;
-	Fc = F[i];
-	while (++i < sett->nmax && F[i] > opts->trl) {
-	  if(F[i] > Fc) {
-	    ii = i;
-	    Fc = F[i];
-	  } // if F[i] 
-	} // while i
-	
-
-	// Candidate signal frequency
-	sgnlt[0] = 2.*M_PI*(FLOAT_TYPE)ii/(FLOAT_TYPE)sett->nfftf + sgnl0;
-	  
-	// Checking if signal is within a known instrumental line 
-	int k, veto_status = 0; 
-	for(k=0; k<sett->numlines_band; k++){
-	  if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
-	    veto_status=1;
-	    break; 
-	  }
-	}
-
-	if(!veto_status) {
-	  
-	  //(*sgnlc)++;
-	  if ( *sgnlc >= sett->bufsize ) {
-	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
-	    exit(EXIT_FAILURE);
-	  }
-	  // Signal-to-noise ratio
-	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
-
-	  // Add new parameters to output array
-	  for (j=0; j<NPAR; ++j)
-	    sgnlv[NPAR*(*sgnlc)+j] = sgnlt[j];
-
-	  (*sgnlc)++;
-	  
-#ifdef VERBOSE
-	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
-		  *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
-#endif
-	}
-      } // for i
-#endif
       
 #if TIMERS>2
       //tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
