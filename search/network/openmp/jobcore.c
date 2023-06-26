@@ -23,23 +23,6 @@
 
 extern volatile sig_atomic_t save_state;
 
-void save_array(complex double *arr, int N, const char* file) {
-  int i;
-  FILE *fc = fopen(file, "w");
-  for (i=0; i<N; i++) {
-    fprintf(fc, "%d %e + i %e\n", i, creal(arr[i]), cimag(arr[i]));
-  }
-  fclose(fc);
-}
-
-void save_array_double(double *arr, int N, const char* file) {
-  int i;
-  FILE *fc = fopen(file, "w");
-  for (i=0; i<N; i++) {
-    fprintf(fc, "%d %e\n", i, arr[i]);
-  }
-  fclose(fc);
-}
 
 // Main searching function (loops inside)
 void search(
@@ -51,7 +34,7 @@ void search(
 	    Aux_arrays *aux,
 	    int *FNum ) {
 
-  // struct stat buffer;
+
   struct flock lck;
   
   int pm, mm, nn;       // hemisphere, sky positions 
@@ -86,6 +69,7 @@ void search(
     if(! opts->checkp_flag) remove(outname);
 
     totsgnl = 0;
+    
     /* Two main loops over sky positions */ 
     
     for (mm=s_range->mst; mm<=s_range->mr[1]; ++mm) {	
@@ -150,7 +134,7 @@ void search(
     // Write the leftover from the last iteration of the buffer 
     if((fd = open(outname, tmode, S_IRUSR|S_IWUSR|S_IRGRP)) < 0) {
 	 perror(outname);
-	 return; 
+	 return;
     }
 
 #ifdef USE_LOCKING
@@ -170,7 +154,7 @@ void search(
   
   //#mb state file has to be modified accordingly to the buffer
   if(opts->checkp_flag) 
-    fclose(state); 
+    fclose(state);
 
   // Free triggers buffer
   free(sgnlv);
@@ -207,18 +191,11 @@ int job_core(int pm,                   // Hemisphere
     nSource[3], ft, het0;
   FLOAT_TYPE sgnlt[NPAR], sgnl0;
   FLOAT_TYPE _tmp1[sett->nifo][sett->N] __attribute__((aligned(128)));
-  /*
-  static double **_tmp1;
-  if (!_tmp1) {
-    _tmp1 = (double **)malloc(sett->nifo*sizeof(double *));
-    for (n=0; n < sett->nifo; n++) _tmp1[n] = (double *)calloc(sett->N, sizeof(double));
-    }*/
 
   struct timespec tstart, tend;
   double spindown_timer = 0;
   int spindown_counter  = 0;
   
-  //tstart = get_current_time(CLOCK_REALTIME);
 
   /* Matrix	M(.,.) (defined on page 22 of PolGrawCWAllSkyReview1.pdf file)
      defines the transformation form integers (bin, ss, nn, mm) determining
@@ -305,19 +282,12 @@ int job_core(int pm,                   // Hemisphere
       for(i=0; i<sett->N; ++i) {
 	// Phase modulation 
 	phase = het0*i + sett->oms*ifo[n].sig.shft[i];
-#ifdef NOSINCOS
-	cp = cos(phase);
-	sp = sin(phase);
-#else
 	sincos(phase, &sp, &cp);
-#endif
-
 	exph = cp - I*sp;
 
 	// Matched filter 
 	ifo[n].sig.xDatma[i] = ifo[n].sig.xDat[i]*ifo[n].sig.aa[i]*exph;
 	ifo[n].sig.xDatmb[i] = ifo[n].sig.xDat[i]*ifo[n].sig.bb[i]*exph;
-  
       }
 
       /* Resampling using spline interpolation:
@@ -339,25 +309,22 @@ int job_core(int pm,                   // Hemisphere
       
     } //omp parallel
 
-    //printf("before xdatma: %f  %f   %f   %f   %f\n", creal(ifo[n].sig.xDatma[2100]), cimag(ifo[n].sig.xDatma[2100]),  
-    //	   creal(ifo[n].sig.xDatma[5000]), cimag(ifo[n].sig.xDatma[5000]), ifo[n].sig.shftf[2100] );
 
     fftw_execute_dft(plans->pl_int,fftw_arr->xa,fftw_arr->xa);  //forward fft (len nfft)
     fftw_execute_dft(plans->pl_int,fftw_arr->xb,fftw_arr->xb);  //forward fft (len nfft)
 
-#if 1
     // move frequencies from second half of spectrum; 
     // and zero frequencies higher than nyquist
     // loop length: nfft - nyqst = nfft - nfft/2 - 1 = nfft/2 - 1
 
     for(i=nyqst + sett->Ninterp - sett->nfft, j=nyqst; i<sett->Ninterp; ++i, ++j)
-	 fftw_arr->xa[i] = fftw_arr->xa[j];
+      fftw_arr->xa[i] = fftw_arr->xa[j];
 #pragma omp parallel for schedule(static) default(shared)
     for(i=nyqst; i<nyqst + sett->Ninterp - sett->nfft; ++i)
       fftw_arr->xa[i] = 0.;
-
+    
     for(i=nyqst + sett->Ninterp - sett->nfft, j=nyqst; i<sett->Ninterp; ++i, ++j)
-	 fftw_arr->xb[i] = fftw_arr->xb[j];    
+      fftw_arr->xb[i] = fftw_arr->xb[j];
 #pragma omp parallel for schedule(static) default(shared)
     for(i=nyqst; i<nyqst + sett->Ninterp - sett->nfft; ++i)
       fftw_arr->xb[i] = 0.;
@@ -381,22 +348,6 @@ int job_core(int pm,                   // Hemisphere
     splintpad(fftw_arr->xb, ifo[n].sig.shftf, sett->N, 
 	      sett->interpftpad, ifo[n].sig.xDatmb);
 
-/*
-    // alternative linear interpolation
-    linterp(fftw_arr->xa, ifo[n].sig.shftf, sett->N, 
-	      sett->interpftpad, ifo[n].sig.xDatma);   
-    linterp(fftw_arr->xb, ifo[n].sig.shftf, sett->N, 
-	      sett->interpftpad, ifo[n].sig.xDatmb);
-*/
-#endif
-#if 0
-    // alternative trigonometric interpolation
-    triginterp(fftw_arr->xa, fftw_arr->xb, ifo[n].sig.shftf, sett->N, sett->nfft, ifo[n].sig.xDatma, ifo[n].sig.xDatmb);
-    printf("after xdatma: %f  %f   %f   %f\n", creal(ifo[n].sig.xDatma[2100]), cimag(ifo[n].sig.xDatma[2100]),  
-	   creal(ifo[n].sig.xDatma[5000]), cimag(ifo[n].sig.xDatma[5000] ) );
-//    exit(1);
-#endif
-
 
   } // end of detector loop 
 
@@ -406,15 +357,15 @@ int job_core(int pm,                   // Hemisphere
   for(n=0; n<sett->nifo; ++n) {
 
     double aatemp = 0., bbtemp = 0.;
- 
+    
     for(i=0; i<sett->N; ++i) {
       aatemp += sqr(ifo[n].sig.aa[i]);
       bbtemp += sqr(ifo[n].sig.bb[i]);
     }
-
+    
     aa += aatemp/ifo[n].sig.sig2; 
     bb += bbtemp/ifo[n].sig.sig2;   
-
+    
     for(i=0; i<sett->N; ++i) {
       ifo[n].sig.xDatma[i] /= ifo[n].sig.sig2;
       ifo[n].sig.xDatmb[i] /= ifo[n].sig.sig2;
@@ -428,20 +379,20 @@ int job_core(int pm,                   // Hemisphere
   // if yes, use smin = s_range->sst, smax = s_range->spndr[1]  
   if(!strcmp(opts->addsig, "") && !strcmp(opts->range, "")) {
 
-      // Spindown range defined using Smin and Smax (settings.c)  
-      smin = trunc((sett->Smin - nn*sett->M[9] - mm*sett->M[13])/sett->M[5]);
-      smax = trunc(-(nn*sett->M[9] + mm*sett->M[13] + sett->Smax)/sett->M[5]);
-
-      // swapping smin and smax in case when grid matrix  
-      // values are defined with opposite signs than ''usual''
-      if(smin > smax) { 
+    // Spindown range defined using Smin and Smax (settings.c)  
+    smin = trunc((sett->Smin - nn*sett->M[9] - mm*sett->M[13])/sett->M[5]);
+    smax = trunc(-(nn*sett->M[9] + mm*sett->M[13] + sett->Smax)/sett->M[5]);
     
-        smin = smin + smax ;
-        smax = smin - smax ;
-        smin = smin - smax ;
-
-      }
-  } 
+    // swapping smin and smax in case when grid matrix  
+    // values are defined with opposite signs than ''usual''
+    if(smin > smax) {
+      
+      smin = smin + smax ;
+      smax = smin - smax ;
+      smin = smin - smax ;
+      
+    }
+  }
 
   
   if(opts->s0_flag) smin = smax;
@@ -566,7 +517,7 @@ int job_core(int pm,                   // Hemisphere
 	for(k=0; k<sett->numlines_band; k++){
 	  if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
 	    veto_status=1;
-	    break; 
+	    break;
 	  }
 	}
 
