@@ -128,7 +128,7 @@ void detectors_settings(Search_settings* sett,
   char det[DETNAME_LENGTH];
 
   // Test frame input directory 
-  sprintf (dirname, "%s/%03d", opts->dtaprefix, opts->ident); 
+  sprintf (dirname, "%s/%03d", opts->indir, opts->seg);
   dp = opendir(dirname);
   if (dp) {
        closedir(dp);
@@ -139,80 +139,81 @@ void detectors_settings(Search_settings* sett,
 
   // test availability of data for detectors
   for (i=0; i<3; i++) {
-       if ( !strlen(opts->usedet) || (strlen(opts->usedet) && (strstr(opts->usedet, dets[i]))) ) {
-	    // detector directory
-	    memset(dirname, 0, sizeof(dirname));
-	    sprintf (dirname, "%s/%03d/%s", opts->dtaprefix, opts->ident, dets[i]);
-	    dp = opendir(dirname);
-	    if (dp) {
-		 closedir(dp);
-		 sprintf(x, "%s/xdatsc_%03d_%04d%s.bin", dirname, opts->ident,
-			                                 opts->band, opts->label);
-		 data = fopen(x, "r");
-		 if (data) {
-		      fclose(data);
-		      //strncpy(ifo[j].xdatname, x, strlen(x));
-		      strcpy(ifo[j].xdatname, x);
-		      strncpy(ifo[j].name, dets[i], DETNAME_LENGTH);
-		      memset(x, 0, sizeof(x));
-		      j++;
-		 } else {
-		      printf("Directory %s exists, but no input file found:\n%s missing...\n", dirname, x);
-		      exit(EXIT_FAILURE);
-		 }
-		 
-	    } else {
-		 if ( strlen(opts->usedet) && (strstr(opts->usedet, dets[i])) ) {
-		      printf("Can't open the input directory requied by -usedet: %s", dirname);
-		      exit(EXIT_FAILURE);
-		 }
-	    } // if dp
-       } // if
+    if ( !strlen(opts->usedet) ||
+	 (strlen(opts->usedet) && (strstr(opts->usedet, dets[i]))) ) {
+      // detector directory
+      memset(dirname, 0, sizeof(dirname));
+      sprintf (dirname, "%s/%03d/%s", opts->indir, opts->seg, dets[i]);
+      dp = opendir(dirname);
+      if (dp) {
+	closedir(dp);
+	sprintf(x, "%s/xdatsc_%03d_%04d%s.bin", dirname, opts->seg,
+		opts->band, opts->label);
+	data = fopen(x, "r");
+	if (data) {
+	  fclose(data);
+	  //strncpy(ifo[j].xdatname, x, strlen(x));
+	  strcpy(ifo[j].xdatname, x);
+	  strncpy(ifo[j].name, dets[i], DETNAME_LENGTH);
+	  memset(x, 0, sizeof(x));
+	  j++;
+	} else {
+	  printf("Directory %s exists, but no input file found:\n%s missing...\n", dirname, x);
+	  exit(EXIT_FAILURE);
+	}
+	
+      } else {
+	if ( strlen(opts->usedet) && (strstr(opts->usedet, dets[i])) ) {
+	  printf("Can't open the input directory requied by -usedet: %s", dirname);
+	  exit(EXIT_FAILURE);
+	}
+      } // if dp
+    } // if
   } // for i
   
   sett->nifo = j;
 
   for(i=0; i<sett->nifo; i++) {
+    
+    printf("Using %s IFO as detector #%d... %s as input time series data\n", 
+	   ifo[i].name, i, ifo[i].xdatname);
 
-       printf("Using %s IFO as detector #%d... %s as input time series data\n", 
-	      ifo[i].name, i, ifo[i].xdatname);
-
-       // Virgo detector
-       if(!strcmp("V1", ifo[i].name)) {
-
-	    // Geographical latitude phi in radians
-	    ifo[i].ephi = (43.+37./60.+53.0880/3600.)/RAD_TO_DEG;
-	    // Geographical longitude in radians
-	    ifo[i].elam = (10.+30./60.+16.1885/3600.)/RAD_TO_DEG;
-	    // Height h above the Earth ellipsoid in meters
-	    ifo[i].eheight = 51.884;
-	    // Orientation of the detector gamma
-	    ifo[i].egam = (135. - (19.0+25./60.0+57.96/3600.))/RAD_TO_DEG;
-
-       // Hanford H1 detector
-       } else if(!strcmp("H1", ifo[i].name )) {
-
-	    // Geographical latitude phi in radians
-	    ifo[i].ephi = (46+(27+18.528/60.)/60.)/RAD_TO_DEG;
-	    // Geographical longitude in radians
-	    ifo[i].elam = -(119+(24+27.5657/60.)/60.)/RAD_TO_DEG;
-	    // Height h above the Earth ellipsoid in meters
-	    ifo[i].eheight = 142.554;
-	    // Orientation of the detector gamma
-	    ifo[i].egam = 170.9994/RAD_TO_DEG;
-
-       // Livingston L1 detector
-       } else if(!strcmp("L1", ifo[i].name )) {
-
-	    // Geographical latitude phi in radians
-	    ifo[i].ephi = (30+(33+46.4196/60.)/60.)/RAD_TO_DEG;
-	    // Geographical longitude in radians
-	    ifo[i].elam = -(90+(46+27.2654/60.)/60.)/RAD_TO_DEG;
-	    // Height h above the Earth ellipsoid in meters
-	    ifo[i].eheight = -6.574;
-	    // Orientation of the detector gamma
-	    ifo[i].egam = 242.7165/RAD_TO_DEG;
-       }
+    // Virgo detector
+    if(!strcmp("V1", ifo[i].name)) {
+      
+      // Geographical latitude phi in radians
+      ifo[i].ephi = (43.+37./60.+53.0880/3600.)/RAD_TO_DEG;
+      // Geographical longitude in radians
+      ifo[i].elam = (10.+30./60.+16.1885/3600.)/RAD_TO_DEG;
+      // Height h above the Earth ellipsoid in meters
+      ifo[i].eheight = 51.884;
+      // Orientation of the detector gamma
+      ifo[i].egam = (135. - (19.0+25./60.0+57.96/3600.))/RAD_TO_DEG;
+      
+      // Hanford H1 detector
+    } else if(!strcmp("H1", ifo[i].name )) {
+      
+      // Geographical latitude phi in radians
+      ifo[i].ephi = (46+(27+18.528/60.)/60.)/RAD_TO_DEG;
+      // Geographical longitude in radians
+      ifo[i].elam = -(119+(24+27.5657/60.)/60.)/RAD_TO_DEG;
+      // Height h above the Earth ellipsoid in meters
+      ifo[i].eheight = 142.554;
+      // Orientation of the detector gamma
+      ifo[i].egam = 170.9994/RAD_TO_DEG;
+      
+      // Livingston L1 detector
+    } else if(!strcmp("L1", ifo[i].name )) {
+      
+      // Geographical latitude phi in radians
+      ifo[i].ephi = (30+(33+46.4196/60.)/60.)/RAD_TO_DEG;
+      // Geographical longitude in radians
+      ifo[i].elam = -(90+(46+27.2654/60.)/60.)/RAD_TO_DEG;
+      // Height h above the Earth ellipsoid in meters
+      ifo[i].eheight = -6.574;
+      // Orientation of the detector gamma
+      ifo[i].egam = 242.7165/RAD_TO_DEG;
+    }
   }  // for i
   
   // todo: check if there are -usedet detectors without directory match
@@ -386,7 +387,7 @@ int read_lines( Search_settings *sett,
 
   for(int det=0; det < sett->nifo; det++) {
        // search for all veto files matching pattern <data>/lines/<det_name>lines*.csv
-       sprintf(linefile, "%s/lines/%slines*.csv", opts->dtaprefix, ifo[det].name);
+       sprintf(linefile, "%s/lines/%slines*.csv", opts->indir, ifo[det].name);
        
        printf("[%s] Looking for %s ... ", ifo[det].name, linefile);
        glob(linefile, GLOB_DOOFFS, NULL, &globbuf);
@@ -540,7 +541,7 @@ int read_lines( Search_settings *sett,
 
   // save veto lines to a file
   sprintf(linefile, "%s/triggers_%03d_%04d%s.vlines", 
-	  opts->prefix, opts->ident, opts->band, opts->label);
+	  opts->outdir, opts->seg, opts->band, opts->label);
   if ( !(data = fopen(linefile, "w")) ) {
        printf("Can't open %s for writing!\n", linefile);
        exit(EXIT_FAILURE);

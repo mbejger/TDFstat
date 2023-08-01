@@ -25,14 +25,6 @@
 #define CODEVER unknown
 #endif
 
-// Default output and data directories
-#ifndef PREFIX
-#define PREFIX ./candidates
-#endif
-
-#ifndef DTAPREFIX
-#define DTAPREFIX .
-#endif
 
 Detector_settings ifo[MAX_DETECTORS];
 volatile sig_atomic_t save_state = 0;
@@ -56,26 +48,26 @@ int main (int argc, char* argv[]) {
     printf("State saved on SIGTERM or SIGUSR1\n");    
 
   // Command line options 
-  handle_opts(&sett, &opts, argc, argv);  
+  //handle_opts(&sett, &opts, argc, argv);
+  read_ini_file(&sett, &opts, argc, argv);    
 	
   // Output data handling
   struct stat buffer;
 
-  if (stat(opts.prefix, &buffer) == -1) {
+  if (stat(opts.outdir, &buffer) == -1) {
     if (errno == ENOENT) {
       // Output directory apparently does not exist, try to create one
-      if(mkdir(opts.prefix, S_IRWXU | S_IRGRP | S_IXGRP 
+      if(mkdir(opts.outdir, S_IRWXU | S_IRGRP | S_IXGRP 
           | S_IROTH	| S_IXOTH) == -1) {
-	      perror (opts.prefix);
+	      perror (opts.outdir);
 	      return 1;
       }
     } else { // can't access output directory
-      perror (opts.prefix);
+      perror (opts.outdir);
       return 1;
     }
   }
  
-	
   // Detector network settings
   detectors_settings(&sett, &opts); 
 
@@ -84,7 +76,6 @@ int main (int argc, char* argv[]) {
 
   // Search settings
   search_settings(&sett); 
-
 
   // Array initialization and reading the ephemerids 
   init_arrays(&sett, &opts, &aux_arr);
@@ -116,10 +107,9 @@ int main (int argc, char* argv[]) {
   FFTW_plans fftw_plans;
   FFTW_arrays fftw_arr;
   plan_fftw(&sett, &opts, &fftw_plans, &fftw_arr, &aux_arr);
-  if (strlen(opts.getrange)) exit(EXIT_SUCCESS);
 
   // Checkpointing
-  int Fnum=0;			        // candidate signal number
+  int Fnum=0;	// candidate signal number
   read_checkpoints(&opts, &s_range, &Fnum);
 
   // main search job

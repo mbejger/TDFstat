@@ -3,11 +3,11 @@
 
 #include "struct.h"
 
-void handle_opts(
-		 Search_settings *sett,
-		 Command_line_opts *opts,
-		 int argc,  
-		 char* argv[]);  
+void read_ini_file(
+		   Search_settings *sett,
+		   Command_line_opts *opts,
+		   int argc,  
+		   char* argv[]);  
 
 void init_arrays(
 		 Search_settings *sett,

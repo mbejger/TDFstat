@@ -13,7 +13,10 @@ PREC = FLOAT
 FFTW_DIR = /opt/fftw/3.3.10-gcc9-mvapich2.2
 #FFTW_DIR = $(CONDA_PREFIX)
 
-#-------------------- EDIT BELOW WITH CAUTIN --------------
+INIPARSER_DIR = ../../../utils/iniparser
+
+#-------------------- EDIT BELOW WITH CAUTION --------------
+
 ifeq ($(strip $(SIMD)), NONE)
 	PERF = sincos-${PREC}
 	SINCOS = GNUSINCOS
@@ -44,18 +47,17 @@ CC = gcc -std=gnu11 -static-libgcc -fopenmp #-flto
 
 # TIMERS=1 measure total time, TIMERS=3 measure spindown loop time
 # PREFIX is the default output directory
-CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=3 -D$(SINCOS) -UUSE_LOCKING  -DCOMP_${PREC} ${VCFLAGS}  #-DVERBOSE 
-CFLAGS += -I$(FFTW_DIR)/include 
+CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=3 -D$(SINCOS) -UUSE_LOCKING  -DCOMP_${PREC} ${VCFLAGS} #-DVERBOSE 
+CFLAGS += -I$(FFTW_DIR)/include -I$(INIPARSER_DIR)/src
 CFLAGS += -g -Wall -Wno-unused \
 	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops \
 	  -march=$(ARCH) -mtune=$(ARCH)
 
 
-
-LDFLAGS = -L$(FFTW_DIR)/lib ${VLDFLAGS}
-
+LDFLAGS = -L$(FFTW_DIR)/lib ${VLDFLAGS} -L$(INIPARSER_DIR)
 LDLIBS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
-	 -static -lfftw3 -lfftw3_omp $(FFTW_FLOAT_LIBS) ${VLIBS} -lgsl -lgslcblas \
+	 -static -lfftw3 -lfftw3_omp $(FFTW_FLOAT_LIBS) ${VLIBS} \
+	 -lgsl -lgslcblas -liniparser \
 	 -Wl,-Bdynamic -lc -lm -lrt
 
 

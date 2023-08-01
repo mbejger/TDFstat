@@ -57,14 +57,16 @@ void search(
   int tmode = O_WRONLY|O_CREAT|O_APPEND;
 
   state = NULL;
-  if(opts->checkp_flag) state = fopen (opts->qname, "w");
+  if (opts->checkp_flag) state = fopen (opts->qname, "w");
+  // PCI: write initial state here, otherwise it's empty until trig buffer flush
+  // if the code breaks before, restart will abort because of empty state file
   
   /* Loop over hemispheres */ 
   
   for (pm=s_range->pst; pm<=s_range->pmr[1]; ++pm) {
 
     sprintf (outname, "%s/triggers_%03d_%04d%s_%d.bin", 
-	     opts->prefix, opts->ident, opts->band, opts->label, pm);
+	     opts->outdir, opts->seg, opts->band, opts->label, pm);
     // remove existing trigger file if checkpointing is disabled
     if(! opts->checkp_flag) remove(outname);
 
@@ -114,14 +116,14 @@ void search(
 	     sgnlc=0;
 	     
 	     if(opts->checkp_flag) {
-		  ftruncate(fileno(state), 0);  
-		  fprintf(state, "%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
-		  fseek(state, 0, SEEK_SET);
-		  if (save_state == 1) {
-		       //printf("%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
-		       printf("\nState saved after signal\nExiting\n");
-		       exit(EXIT_SUCCESS);
-		  }
+	       ftruncate(fileno(state), 0);
+	       fprintf(state, "%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
+	       fseek(state, 0, SEEK_SET);
+	       if (save_state == 1) {
+		 //printf("%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
+		 printf("\nState saved after signal\nExiting\n");
+		 exit(EXIT_SUCCESS);
+	       }
 	     }
 	     save_state = 0;
 	     
@@ -377,7 +379,7 @@ int job_core(int pm,                   // Hemisphere
   // or the range file is given:  
   // if not, proceed with the wide range of spindowns 
   // if yes, use smin = s_range->sst, smax = s_range->spndr[1]  
-  if(!strcmp(opts->addsig, "") && !strcmp(opts->range, "")) {
+  if(!strcmp(opts->addsig, "") && !strcmp(opts->range_file, "")) {
 
     // Spindown range defined using Smin and Smax (settings.c)  
     smin = trunc((sett->Smin - nn*sett->M[9] - mm*sett->M[13])/sett->M[5]);
@@ -395,9 +397,6 @@ int job_core(int pm,                   // Hemisphere
   }
 
   
-  if(opts->s0_flag) smin = smax;
-  // if spindown parameter is taken into account, smin != smax
-
   const int s_stride = 1;
   printf ("\n>>%d\t%d\t%d\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
 
@@ -483,9 +482,8 @@ int job_core(int pm,                   // Hemisphere
 
 
       // Normalize F-statistics if the noise is not white noise
-      if(!(opts->white_flag)) {
-	double pxout = FStat(F + sett->nmin, sett->nmax - sett->nmin,
-			     NAVFSTAT, 0);
+      if( ! strcmp(opts->fstat_norm, "blocks_avg") ) {
+	FStat(F + sett->nmin, sett->nmax - sett->nmin, NAVFSTAT, 0);
       }
 
       /* select triggers */
@@ -499,7 +497,7 @@ int job_core(int pm,                   // Hemisphere
       /* stay in (nmin, nmax) range! */
       for(i=sett->nmin+1; i<sett->nmax-dd; i+=dd) {
 	int ii=-1;
-	FLOAT_TYPE Fc = opts->trl;
+	FLOAT_TYPE Fc = opts->thr;
 	for (j=i; j<i+dd; ++j) {
 	  if (F[j] < Fc || F[j-1] > F[j] || F[j] < F[j+1] ) continue;
 	  ii = j;

@@ -6,7 +6,7 @@
 
 #define MAX_DETECTORS 8        // Maximum number of detectors in network 
 #define DETNAME_LENGTH 2       // Detector name length (H1, L1, V1...)
-#define XDATNAME_LENGTH 2048   // Maximum length of input file (xdat*bin) path
+#define FNAME_LENGTH 2048      // Maximum length of a filename
 #define INICANDSIZE 1048576    // Initial size for array candidates storage; 
                                // realloc called if needed (in coincidences)  
 
@@ -16,21 +16,21 @@
 // Command line option struct for search 
 typedef struct _comm_line_opts {
   
-  int white_flag, 		// white noise flag
-      s0_flag,			// no spin-down flag
-      checkp_flag,		// checkpointing flag
+  int checkp_flag,		// checkpointing flag
       veto_flag,                // veto lines flag (apply veto lines)
       gen_vlines_flag,          // (re)generate .vlines files and exit
       help_flag;
   
   int fftinterp;
-  int ident, band, hemi, nod;
-  double trl;
+  int seg, band, hemi, nod;
+  double thr;
   double fpo_val, narrowdown, overlap;
   
-  char prefix[512], dtaprefix[512], label[32], 
-    range[512], getrange[512], qname[562], usedet[32], addsig[512], *wd;
-  
+  const char *indir, *outdir, *range_file, *dump_range_file,
+             *usedet, *addsig, *fstat_norm, *label;
+
+  char qname[562];
+
 } Command_line_opts;
 
 
@@ -157,7 +157,7 @@ typedef struct _ampl_mod_coeff {
 
 typedef struct _detector { 
 
-    char xdatname[XDATNAME_LENGTH]; 
+    char xdatname[FNAME_LENGTH]; 
     char name[DETNAME_LENGTH]; 
  
     double ephi, 		// Geographical latitude phi in radians

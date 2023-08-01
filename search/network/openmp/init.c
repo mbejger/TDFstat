@@ -19,16 +19,126 @@
 #include "struct.h"
 #include "init.h"
 #include "settings.h"
-
+#include "iniparser.h"
 
 #if defined(_OPENMP)
 #include <omp.h>
 #endif
 
 
-/*  Command line options handling: search 
- */ 
 
+void read_ini_file( Search_settings *sett, 
+		    Command_line_opts *opts,
+		    int argc, 
+		    char* argv[]) {
+  
+  char ini_fname[FNAME_LENGTH];
+  dictionary *ini;
+  int error = 0;
+  
+  if (argc > 1) {
+    strcpy (ini_fname, argv[1]);
+  } else if (argc > 2) {
+    printf("WARNING: too many arguments, only first one is used.\n");    
+  } else {
+    printf("ERROR: missing input file name. Call: \"<executable> search.ini\" \n");
+    exit(EXIT_FAILURE);
+  }
+
+  printf ("Loading config file %s\n", ini_fname);
+  if ((ini = iniparser_load(ini_fname)) == NULL) {
+    perror(ini_fname);
+    exit(EXIT_FAILURE);
+  }
+  
+  iniparser_dump(ini, stdout);
+  
+  // directory containing input data
+  opts->indir = iniparser_getstring(ini, "search:indir", NULL);
+  // output directory
+  opts->outdir = iniparser_getstring(ini, "search:outdir", ".");
+  // band number
+  opts->band = iniparser_getint(ini, "search:band", 0);
+  // time segment number
+  opts->seg = iniparser_getint(ini, "search:seg", 0);
+  // hemisphere 1,2 or 0 for both
+  opts->hemi = iniparser_getint(ini, "search:hemi", 0);
+  // candidate fstatistic threshold
+  opts->thr = iniparser_getdouble(ini, "search:thr", 20.);
+  // number of days (integer)
+  sett->nod = iniparser_getint(ini, "search:nod", 0);
+  // sampling interval of the input time series [seconds] (double)
+  sett->dt = iniparser_getdouble(ini, "search:dt", -1.);
+  // bands overlap [0-1.] defines band base frequency, fpo
+  opts->overlap = iniparser_getdouble(ini, "search:overlap", 0.);
+  // [0-0.5] range of frequencies to output; 0 is nothing, 0.5 is full band
+  opts->narrowdown = iniparser_getdouble(ini, "search:narrowdown", -1.);
+  // use data from subset of detectors only (default is to use all available)
+  opts->usedet = iniparser_getstring(ini, "search:usedet", "");
+  // name of the range file to read
+  opts->range_file = iniparser_getstring(ini, "search:range_file", "");
+  // name of the range file to dump and exit
+  opts->dump_range_file = iniparser_getstring(ini, "search:dump_range_file", "");
+  // name of the file with signall to add
+  // TODO: single line signals to enable multiple signals, more flexible gsize
+  opts->addsig = iniparser_getstring(ini, "search:addsig", "");
+  // optional label of input and output files
+  opts->label = iniparser_getstring(ini, "search:label", "");  
+  
+  // fstatistics normalization; if NULL white noise is assumed
+  // currently only NULL and old blocks_avg are implemented
+  opts->fstat_norm = iniparser_getstring(ini, "search:fstat_norm", NULL);
+
+  //   FLAGS
+  // [0, 1] (in future other values can select different subsets of lines
+  opts->veto_flag = iniparser_getint(ini, "search:veto_flag", 0);
+  // [0, 1] if 1 generate vlines file and exit
+  opts->gen_vlines_flag = iniparser_getint(ini, "search:gen_vlines_flag", 0);
+  // [0, 1] generate checkpoint files at each new sky position
+  opts->checkp_flag = iniparser_getint(ini, "search:checkp_flag", 0);
+
+  
+  // removed:
+  // s0_flag , wd , fpo
+  
+  // qname is set in read_checkpoint
+
+  
+  // various checks
+  if (! opts->indir) {
+    error = 1; printf("[ERROR] missing indir !\n");
+  }
+  if (opts->band < 1) {
+    error = 1; printf("[ERROR] missing band !\n");
+  }
+  if (opts->seg < 1) {
+    error = 1; printf("[ERROR] missing segment !\n");
+  }
+  if (sett->nod < 1) {
+    error = 1; printf("[ERROR] missing nod !\n");
+  }
+  if (sett->dt < 0.) {
+    error = 1; printf("[ERROR] missing dt !\n");
+  }
+
+  if (error == 1) exit(EXIT_FAILURE);
+
+  // test overlap and narrowdown
+  // todo: NAV
+  if (opts->narrowdown < 0.) {
+    opts->narrowdown = (1. - opts->overlap)/2. ;
+  }
+  opts->narrowdown *= M_PI;
+  
+  sett->fpo = 10. + (1. - opts->overlap)*opts->band*(0.5/sett->dt);
+  
+}
+
+
+
+/*  Command line options handling: search  */ 
+
+/*
 void handle_opts( Search_settings *sett, 
 		  Command_line_opts *opts,
 		  int argc, 
@@ -220,8 +330,8 @@ void handle_opts( Search_settings *sett,
       break;
     default:
       break ;
-    } /* switch c */
-  } /* while 1 */
+    } // switch c
+  } // while 1 
 
   // Check if sett->nod was set up, if not, exit
   if(!(sett->nod)) {
@@ -303,8 +413,13 @@ void handle_opts( Search_settings *sett,
 } // end of command line options handling 
 
 
-	/* Generate grid from the M matrix (grid.bin)
-	 */ 
+*/
+
+
+
+
+
+/* Generate grid from the M matrix (grid.bin) */ 
 
 void read_grid( Search_settings *sett, 
 		Command_line_opts *opts ) {
@@ -323,7 +438,7 @@ void read_grid( Search_settings *sett,
      
      if(strlen(opts->usedet)==2 || sett->nifo==1 ) {
 	  //sprintf (filename, "%s/%03d/%s/grid.bin", opts->dtaprefix, opts->ident, opts->usedet);
-     	  sprintf (filename, "%s/%03d/%s/grid.bin", opts->dtaprefix, opts->ident, ifo[0].name);
+     	  sprintf (filename, "%s/%03d/%s/grid.bin", opts->indir, opts->seg, ifo[0].name);
      } else {
 	  //sprintf (filename, "%s/%03d/grid.bin", opts->dtaprefix, opts->ident);
 	  // det network
@@ -331,7 +446,7 @@ void read_grid( Search_settings *sett,
           for(i=0; i<sett->nifo; i++)
 	       strcat(dnet_str, ifo[i].name);
 
-	  sprintf (filename, "%s/%03d/grids/grid_%03d_%04d_%sc.bin", opts->dtaprefix, opts->ident, opts->ident, opts->band, dnet_str);
+	  sprintf (filename, "%s/%03d/grids/grid_%03d_%04d_%sc.bin", opts->indir, opts->seg, opts->seg, opts->band, dnet_str);
      }
 	  
 
@@ -412,7 +527,7 @@ void init_arrays(
     // Ephemeris file handling
     char filename[562];
     sprintf (filename, "%s/%03d/%s/DetSSB.bin", 
-        opts->dtaprefix, opts->ident, ifo[i].name);
+        opts->indir, opts->seg, ifo[i].name);
 
     if((data = fopen(filename, "r")) != NULL) {
       // Detector position w.r.t Solar System Baricenter
@@ -546,7 +661,7 @@ void add_signal(
   // for the software injections
   // sgnlo[0]: frequency, sgnlo[1]: frequency. derivative  
  
-  sgnlo[0] += -2.*sgnlo[1]*(sett->N)*(reffr - opts->ident); 
+  sgnlo[0] += -2.*sgnlo[1]*(sett->N)*(reffr - opts->seg); 
  
   // Check if the signal is in band 
 /*
@@ -619,8 +734,8 @@ void add_signal(
   cosaadd = cos(sgnlo[3]); 
 	
   // To keep coherent phase between time segments  
-  double phaseshift = sgnlo[0]*sett->N*(reffr - opts->ident)   
-    + sgnlo[1]*pow(sett->N*(reffr - opts->ident), 2); 
+  double phaseshift = sgnlo[0]*sett->N*(reffr - opts->seg)   
+    + sgnlo[1]*pow(sett->N*(reffr - opts->seg), 2); 
 
 
   // Allocate arrays for added signal, for each detector 
@@ -714,9 +829,9 @@ void set_search_range(
   // within the range of grid parameters from an ascii file
   // ("-r range_file" from the command line)
   FILE *data;
-  if (strlen (opts->range)) {
+  if (strlen (opts->range_file)) {
 
-    if ((data=fopen (opts->range, "r")) != NULL) {
+    if ((data = fopen(opts->range_file, "r")) != NULL) {
 
       int aqq = fscanf(data, "%d %d %d %d %d %d %d %d",
 		       s_range->spndr, 1+s_range->spndr, 
@@ -816,7 +931,7 @@ void set_search_range(
       fclose (data);
 
     } else {
-      perror (opts->range);
+      perror (opts->range_file);
       exit(EXIT_FAILURE);
     }
 
@@ -833,23 +948,23 @@ void set_search_range(
 	  sett->oms,
 	  sett->Smax);
 
-    if (strlen(opts->getrange)) {
+    if (strlen(opts->dump_range_file)) {
 
       FILE *data;
-      if ((data=fopen (opts->getrange, "w")) != NULL) {
+      if ((data=fopen (opts->dump_range_file, "w")) != NULL) {
 	fprintf(data, "%d %d\n%d %d\n%d %d\n%d %d\n",
 		s_range->spndr[0], s_range->spndr[1],
 		s_range->nr[0], s_range->nr[1],
 		s_range->mr[0], s_range->mr[1],
 		s_range->pmr[0], s_range->pmr[1] );
 	
-	printf("Wrote input data grid ranges to %s\n", opts->getrange);
+	printf("Wrote input data grid ranges to %s\n", opts->dump_range_file);
 	fclose (data);
-	//	exit(EXIT_SUCCESS);
+	exit(EXIT_SUCCESS);
 	
       } else {
 	
-	printf("Can't open %s file for writing\n", opts->getrange);
+	printf("Can't open %s file for writing\n", opts->dump_range_file);
        	exit(EXIT_FAILURE);
 	
       }
@@ -858,11 +973,11 @@ void set_search_range(
   }
 
   printf("set_search_range() - the grid ranges are maximally this:\n"); 
-  printf("(spndr, nr, mr, pmr pairs): %d %d %d %d %d %d %d %d\n",	\
+  printf("(spndr, nr, mr, pmr pairs): %d %d %d %d %d %d %d %d\n",
 	 s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
 	 s_range->mr[0], s_range->mr[1], s_range->pmr[0], s_range->pmr[1]);
 
-  printf("Smin: %le, -Smax: %le\n", sett->Smin, sett->Smax); 
+  printf("Smin: %le, -Smax: %le\n", sett->Smin, sett->Smax);
 
 } // end of set search range 
 
@@ -952,39 +1067,37 @@ void plan_fftw(
 
   /* Checkpointing */
 
-void read_checkpoints(
-	Command_line_opts *opts, 
-  Search_range *s_range, 
-	int *FNum) {
+void read_checkpoints( Command_line_opts *opts, 
+		       Search_range *s_range, 
+		       int *FNum) {
 
-  
   if(opts->checkp_flag) {
-		
+
     // filename of checkpoint state file, depending on the hemisphere
     if(opts->hemi)
       sprintf(opts->qname, "state_%03d_%04d%s_%d.dat",  
-	            opts->ident, opts->band, opts->label, opts->hemi);
+	            opts->seg, opts->band, opts->label, opts->hemi);
     else
       sprintf(opts->qname, "state_%03d_%04d%s.dat", 
-	            opts->ident, opts->band, opts->label);
+	            opts->seg, opts->band, opts->label);
 
     FILE *state;
     if((state = fopen(opts->qname, "r")) != NULL) {
 
       // Scan the state file to get last recorded parameters
       if((fscanf(state, "%d %d %d %d %d", &s_range->pst, &s_range->mst,
-		      &s_range->nst, &s_range->sst, FNum)) == EOF) {
+		 &s_range->nst, &s_range->sst, FNum)) == EOF) {
 
-	   // This means that state file is empty (=end of the calculations)
-	   fprintf (stderr, "State file empty: nothing to do...\n");
-	   fclose (state);
-	   exit(EXIT_FAILURE);
-	   
+	// This means that state file is empty (=end of the calculations)
+	fprintf (stderr, "State file empty: nothing to do...\n");
+	fclose (state);
+	exit(EXIT_FAILURE);
+	
       }
 
       fclose (state);
 
-    // No state file - start from the beginning
+      // No state file - start from the beginning
     } else {
       s_range->pst = s_range->pmr[0];
       s_range->mst = s_range->mr[0];
@@ -1000,12 +1113,11 @@ void read_checkpoints(
     s_range->sst = s_range->spndr[0];
     *FNum = 0;
   } // if checkp_flag
-
+  
 } // end reading checkpoints
 
 
-  /* Cleanup & memory free 
-	 */
+  /* Cleanup & memory free  */
 
 void cleanup(
 	Search_settings *sett,
