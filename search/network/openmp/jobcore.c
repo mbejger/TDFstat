@@ -560,8 +560,8 @@ int job_core(int pm,                   // Hemisphere
     } // for ss 
   
 #ifndef VERBOSE 
-  printf("Number of signals found: %d\n", *sgnlc); 
-#endif 
+  printf("Number of signals found: %d (buffer %d%% full)\n", *sgnlc, (*sgnlc)*100/(sett->bufsize/2) );
+#endif
 
 
 #if TIMERS>2
