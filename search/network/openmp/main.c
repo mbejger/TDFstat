@@ -48,7 +48,6 @@ int main (int argc, char* argv[]) {
     printf("State saved on SIGTERM or SIGUSR1\n");    
 
   // Command line options 
-  //handle_opts(&sett, &opts, argc, argv);
   read_ini_file(&sett, &opts, argc, argv);    
 	
   // Output data handling
@@ -117,23 +116,24 @@ int main (int argc, char* argv[]) {
          &fftw_plans, &fftw_arr, &aux_arr,
 	 &Fnum);
 
-  // state file zeroed at the end of the run
+  // state file is emptied and closed in jobcore to mark successful end
+  // do not remove it here
+  /*
   FILE *state;
   if(opts.checkp_flag) {
     remove(opts.qname);
-    //state = fopen (opts.qname, "w");
-    //fclose (state);
   }
-	
+  */
+  
   // Cleanup & memory free 
-  cleanup(&sett, &opts, &s_range, 
-          &fftw_plans, &fftw_arr, &aux_arr);
+  cleanup(&sett, &opts, &s_range, &fftw_plans, &fftw_arr, &aux_arr);
 
   return 0; 
 	
 }
 
 
+// signal handler to save state and exit before end
 static void sig_handler(int signo)
 {
   if (signo == SIGTERM || signo == SIGUSR1) save_state = 1;

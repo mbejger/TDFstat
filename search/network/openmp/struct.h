@@ -29,7 +29,7 @@ typedef struct _comm_line_opts {
   const char *indir, *outdir, *range_file, *dump_range_file,
              *usedet, *addsig, *fstat_norm, *label;
 
-  char qname[562];
+  char state_file[FNAME_LENGTH];
 
 } Command_line_opts;
 

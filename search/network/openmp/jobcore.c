@@ -57,9 +57,14 @@ void search(
   int tmode = O_WRONLY|O_CREAT|O_APPEND;
 
   state = NULL;
-  if (opts->checkp_flag) state = fopen (opts->qname, "w");
-  // PCI: write initial state here, otherwise it's empty until trig buffer flush
-  // if the code breaks before, restart will abort because of empty state file
+  if (opts->checkp_flag) {
+    state = fopen (opts->state_file, "w");
+    // spindown below is wrong if addsig or range_file is used
+    // but then we don't need checkpointing
+    fprintf(state, "%d %d %d %d %d\n", s_range->pst, s_range->mst,
+	    s_range->nst, s_range->sst, *FNum);
+    fseek(state, 0, SEEK_SET);
+  }
   
   /* Loop over hemispheres */ 
   
@@ -154,10 +159,13 @@ void search(
     
   } // for pm
   
-  //#mb state file has to be modified accordingly to the buffer
-  if(opts->checkp_flag) 
-    fclose(state);
 
+  if(opts->checkp_flag) {
+    // empty state file to prevent restart after successful end
+    ftruncate(fileno(state), 0);
+    fclose(state);
+  }
+  
   // Free triggers buffer
   free(sgnlv);
   

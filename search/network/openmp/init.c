@@ -98,10 +98,7 @@ void read_ini_file( Search_settings *sett,
   opts->checkp_flag = iniparser_getint(ini, "search:checkp_flag", 0);
 
   
-  // removed:
-  // s0_flag , wd , fpo
-  
-  // qname is set in read_checkpoint
+  // state_file is set in read_checkpoint
 
   
   // various checks
@@ -1075,14 +1072,14 @@ void read_checkpoints( Command_line_opts *opts,
 
     // filename of checkpoint state file, depending on the hemisphere
     if(opts->hemi)
-      sprintf(opts->qname, "state_%03d_%04d%s_%d.dat",  
-	            opts->seg, opts->band, opts->label, opts->hemi);
+      sprintf(opts->state_file, "state_%03d_%04d%s_%d.dat",  
+	      opts->seg, opts->band, opts->label, opts->hemi);
     else
-      sprintf(opts->qname, "state_%03d_%04d%s.dat", 
-	            opts->seg, opts->band, opts->label);
-
+      sprintf(opts->state_file, "state_%03d_%04d%s.dat", 
+	      opts->seg, opts->band, opts->label);
+    
     FILE *state;
-    if((state = fopen(opts->qname, "r")) != NULL) {
+    if((state = fopen(opts->state_file, "r")) != NULL) {
 
       // Scan the state file to get last recorded parameters
       if((fscanf(state, "%d %d %d %d %d", &s_range->pst, &s_range->mst,
