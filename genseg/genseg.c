@@ -20,7 +20,7 @@ int GrubbsOutliersMany (double *, double *, int, int, double, const char *);
 
 /* Default configuration file. */
 /* Cann be overridden by the first command-line arg */
-#define INI_FNAME "input_s6.txt"
+#define INI_FNAME "genseg.ini"
 
 /* sft filename extension */
 #define SFT_SUFFIX ".out"
@@ -46,13 +46,12 @@ int GrubbsOutliersMany (double *, double *, int, int, double, const char *);
 
 int main (int argc, char *argv[]) {
      FILE *data, *td_stream;
-     char inp[MAX_LINE], buf[MAX_LINE], td_fname[MAX_LINE+32],		\
-	  tdc_fname[MAX_LINE+32], td_dir[MAX_LINE], ini_fname[MAX_LINE],	\
+     char inp[MAX_LINE], td_fname[MAX_LINE+32],				\
+	  tdc_fname[MAX_LINE+32], td_dir[MAX_LINE], ini_fname[MAX_LINE], \
 	  date_fname[MAX_LINE+16], sft_fname[MAX_LINE];
-     double fpo, tmp1, tmp2, gpsd, gpsd1, gpsdn, gps1, *gpsdv, *gpsd1v,	\
-	  gpsdRest = 0;
-     int N, lfft, lfftr, lfftm, lenx, ldat, n, i, j, yndx, notempty, \
-	  bufsize = BUFSIZE, dd = 1, nSeg, nfiles = 0,		\
+     double fpo, gpsd, gpsd1, gpsdn, gps1, *gpsdv, *gpsd1v, gpsdRest = 0;
+     int N, lfft, lfftr, lfftm, lenx, ldat, n, i, j, yndx, notempty,	\
+	  bufsize = BUFSIZE, dd = 1, nSeg, nfiles = 0,			\
 	  nxRest = 0, nxall = 0, flidx, offset, gen_sci, nout;
      double *rdt, *rtmp, *xtime, *x0, alpha, dt, othr, *xRest=NULL,	\
 	  *xall, w_taper_dt;
@@ -87,20 +86,19 @@ int main (int argc, char *argv[]) {
      }
 
      startgps = iniparser_getdouble(ini, "general:startgps", 0.0); // write time sequences starting from this time
-
+     N = iniparser_getint (ini, "general:n", 0);
+     // lfft = iniparser_getint (ini, "general:lfft", 2048);
+     alpha = iniparser_getdouble (ini, "general:alpha", 0.1);  // grubbs test parameter
+     dt = iniparser_getdouble (ini, "general:dt", 0.);
+     othr = iniparser_getdouble (ini, "general:othresh", 1.);   // threshold for large outliers at edges of science regions
      site = iniparser_getstring (ini, "data:site", NULL);
      plsr = iniparser_getstring (ini, "data:plsr", NULL);
      DataDir = iniparser_getstring (ini, "data:datadir", NULL);
      SftDir = iniparser_getstring (ini, "data:sftdir", NULL);
      flsum = iniparser_getstring (ini, "data:flsum", NULL);
-     N = iniparser_getint (ini, "general:n", 344656);
-     lfft = iniparser_getint (ini, "general:lfft", 2048);
-     alpha = iniparser_getdouble (ini, "general:alpha", 0.1);
-     dt = iniparser_getdouble (ini, "general:dt", 0.5);
-     othr = iniparser_getdouble (ini, "general:othresh", 250.);   // threshold to clean large outliers
      out_replace = iniparser_getstring (ini, "data:out_replace", "gauss");  // replace outliers with zero or random gaussian value
      gen_sci = iniparser_getboolean (ini, "general:scientific", 1); // use science data only
-     w_taper_dt = iniparser_getdouble (ini, "data:w_taper_dt", 1200.);   // Tukey window tapering size in seconds; if <=0 do not apply window to science regions
+     w_taper_dt = iniparser_getdouble (ini, "data:w_taper_dt", 600.);   // Tukey window tapering size in seconds; if <=0 do not apply window to science regions
 
 
      const gsl_rng_type *T;
@@ -206,7 +204,10 @@ int main (int argc, char *argv[]) {
 
      // Read "nfile" number of *.out files
      for (flidx=0; flidx < nfiles; flidx++) {
-	  fprintf (stderr, ">>> Reading data file %s ...", flnames[flidx]);
+       double bandwidth, subsampling, df, einstein_factor, mjd;
+       int samples, isoverlap, sft_no;
+       char buf[MAX_LINE];
+          fprintf (stderr, ">>> Reading data file %s ...", flnames[flidx]);
 	  sprintf (sft_fname, "%s/%s", SftDir, flnames[flidx]);
 	  // read header and check the file
 	  if ((data=fopen (sft_fname, "r")) != NULL) {
@@ -218,7 +219,7 @@ int main (int argc, char *argv[]) {
 		    perror ("Incorrect data file format");
 		    return 1;
 	       }
-	       sscanf (inp, "%s %lf", buf, &fpo);
+	       sscanf (inp, "%s %lf %lf %d %lf %d %lf %lf", buf, &fpo, &bandwidth, &samples, &subsampling, &isoverlap, &df, &einstein_factor);
 	       if (fgets (inp, MAX_LINE, data) == NULL) {
 		    perror ("Incorrect data file format");
 		    return 1;
@@ -227,7 +228,11 @@ int main (int argc, char *argv[]) {
 		    perror ("Incorrect data file format");
 		    return 1;
 	       }
-	       sscanf (inp, "%s %lf %lf %lf %lf", buf, &tmp1, &tmp2, &gpsd, &gpsdn);
+	       sscanf (inp, "%s %d %lf %lf %lf", buf, &sft_no, &mjd, &gpsd, &gpsdn);
+
+	       lfft = samples*2;
+	       printf("first sft_no=%d  lfft=%d  subsampling=%e\n", sft_no, lfft, subsampling);
+	       
 	       gpsd += gpsdn/1.0e-9;  // staring GPS time for a file
 	       gpsdv[flidx] = gpsd;
 	       ldat = 0;
@@ -295,15 +300,19 @@ int main (int argc, char *argv[]) {
 	  fftw_execute (plan);
 	  fftw_destroy_plan (plan);
 
-	  /* Set up the time domain sequence.		*/
-	  /* Remove overlapping, add borders.		*/
+	  /* Set up the time domain sequence.
+	     Remove overlapping, add borders.
+	     Data are scaled by subsampling factor (bo not by Einstein's factor) */
+	  
+	  double norm = 1./(lfft*subsampling);
 	  for (j=0; j<lfftr; j++)
-	       *(xtime+j) = (*(Xout_array+j))[0]/lfft;
+	       *(xtime+j) = (*(Xout_array+j))[0] * norm;
 	  for (i=0; i<n; i++)
 	       for (j=0; j<lfftm; j++)
-		    *(xtime+lfftr+i*lfftm+j) = (*(Xout_array+i*lfft+lfftr+j))[0]/lfft;
+		    *(xtime+lfftr+i*lfftm+j) = (*(Xout_array+i*lfft+lfftr+j))[0] * norm;
 	  for (j=0; j<lfftr; j++)
-	       *(xtime+lfftr+n*lfftm+j) = (*(Xout_array+(n-1)*lfft+lfftr+lfftm+j))[0]/lfft;
+	       *(xtime+lfftr+n*lfftm+j) = (*(Xout_array+(n-1)*lfft+lfftr+lfftm+j))[0] * norm;
+	  
 	  fftw_free (Xin_array);
 	  fftw_free (Xout_array);
 
