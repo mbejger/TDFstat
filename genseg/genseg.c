@@ -12,6 +12,10 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
+// it has to be consistent with settings.h from search
+#define C_OMEGA_R 7.2921151467064e-5
+#define C_SIDDAY (2.*M_PI/C_OMEGA_R)
+
 int GrubbsOutliersMany (double *, double *, int, int, double, const char *);
 #include "iniparser.h"
 
@@ -50,11 +54,11 @@ int main (int argc, char *argv[]) {
 	  tdc_fname[MAX_LINE+32], td_dir[MAX_LINE], ini_fname[MAX_LINE], \
 	  date_fname[MAX_LINE+16], sft_fname[MAX_LINE];
      double fpo, gpsd, gpsd1, gpsdn, gps1, *gpsdv, *gpsd1v, gpsdRest = 0;
-     int N, lfft, lfftr, lfftm, lenx, ldat, n, i, j, yndx, notempty,	\
+     int  N, nod, lfft, lfftr, lfftm, lenx, ldat, n, i, j, yndx, notempty, \
 	  bufsize = BUFSIZE, dd = 1, nSeg, nfiles = 0,			\
 	  nxRest = 0, nxall = 0, flidx, offset, gen_sci, nout;
      double *rdt, *rtmp, *xtime, *x0, alpha, dt, othr, *xRest=NULL,	\
-	  *xall, w_taper_dt;
+	  *xall, w_taper_dt, B, maxasd;
      int fftsize[] = {0};
      fftw_complex *Xin_array, *Xout_array;
      fftw_plan plan;
@@ -65,7 +69,8 @@ int main (int argc, char *argv[]) {
      
      double mingps=0., maxgps=0.;
      double start, end;
-     int numbersegan=0;
+     int numbersegan=0, error=0;
+     const double efac = 1.e-20;
      
 #ifdef USE_LAL
      int gen_eph;
@@ -85,22 +90,40 @@ int main (int argc, char *argv[]) {
 	  return 1;
      }
 
-     startgps = iniparser_getdouble(ini, "general:startgps", 0.0); // write time sequences starting from this time
-     N = iniparser_getint (ini, "general:n", 0);
-     // lfft = iniparser_getint (ini, "general:lfft", 2048);
-     alpha = iniparser_getdouble (ini, "general:alpha", 0.1);  // grubbs test parameter
-     dt = iniparser_getdouble (ini, "general:dt", 0.);
-     othr = iniparser_getdouble (ini, "general:othresh", 1.);   // threshold for large outliers at edges of science regions
-     site = iniparser_getstring (ini, "data:site", NULL);
-     plsr = iniparser_getstring (ini, "data:plsr", NULL);
-     DataDir = iniparser_getstring (ini, "data:datadir", NULL);
-     SftDir = iniparser_getstring (ini, "data:sftdir", NULL);
-     flsum = iniparser_getstring (ini, "data:flsum", NULL);
-     out_replace = iniparser_getstring (ini, "data:out_replace", "gauss");  // replace outliers with zero or random gaussian value
-     gen_sci = iniparser_getboolean (ini, "general:scientific", 1); // use science data only
-     w_taper_dt = iniparser_getdouble (ini, "data:w_taper_dt", 600.);   // Tukey window tapering size in seconds; if <=0 do not apply window to science regions
+     startgps = iniparser_getdouble(ini, "genseg:startgps", 0.0); // write time sequences starting from this time
+     nod = iniparser_getint (ini, "genseg:nod", 0);               // number of days
+     // lfft = iniparser_getint (ini, "genseg:lfft", 2048);
+     alpha = iniparser_getdouble (ini, "genseg:alpha", 0.1);      // grubbs test parameter
+     dt = iniparser_getdouble (ini, "genseg:dt", 0.);             // sampling time in seconds
+     //othr = iniparser_getdouble (ini, "genseg:othresh", 1.);    // threshold for large outliers at edges of science regions
+     maxasd = iniparser_getdouble (ini, "genseg:maxasd", 1.e-21); // max. asd in band, used to calculate 10*sigma_strain threshold for large outliers
+     site = iniparser_getstring (ini, "genseg:site", NULL);
+     plsr = iniparser_getstring (ini, "genseg:plsr", NULL);
+     DataDir = iniparser_getstring (ini, "genseg:datadir", NULL);
+     SftDir = iniparser_getstring (ini, "genseg:sftdir", NULL);
+     flsum = iniparser_getstring (ini, "genseg:flsum", NULL);
+     out_replace = iniparser_getstring (ini, "genseg:out_replace", "gauss");  // replace outliers with zero or random gaussian value
+     gen_sci = iniparser_getboolean (ini, "genseg:scientific", 1); // use science data only
+     w_taper_dt = iniparser_getdouble (ini, "genseg:w_taper_dt", 600.);   // Tukey window tapering size in seconds; if <=0 do not apply window to science regions
 
+     
+     if (nod <= 0) {
+	  error = 1; printf("nod <= 0 !\n");
+     }
+     if (dt <= 0.) {
+	  error = 1; printf("dt <= 0 !\n");
+     }
+     if (error == 1) exit(EXIT_FAILURE);
+     
+     B = 1./(2.*dt);
+     N = round(nod*C_SIDDAY/dt);      // No. of data points
+     printf("Bandwidth = %f        N = %d\n", B, N);
 
+     // 10 * sigma
+     othr = 10.*maxasd*sqrt(B)/efac;
+     printf("Large outlier threshold: othr = %g\n", othr);
+
+     
      const gsl_rng_type *T;
      gsl_rng *r = NULL;
      unsigned long mySeed;
@@ -117,7 +140,7 @@ int main (int argc, char *argv[]) {
      double *segar = NULL;
 
      if(gen_sci){
-	  segments_fname = iniparser_getstring (ini, "general:segments", NULL);
+	  segments_fname = iniparser_getstring (ini, "genseg:segments", NULL);
 
 	  FILE  *segment_file = fopen(segments_fname, "r");
 	  if(segment_file == NULL){
@@ -156,15 +179,15 @@ int main (int argc, char *argv[]) {
 
      
 #ifdef USE_LAL
-     gen_eph = iniparser_getboolean (ini, "general:ephemeris", 0);
+     gen_eph = iniparser_getboolean (ini, "genseg:ephemeris", 0);
      if (gen_eph) {
 	 detector = get_detector ((char *)site);
 	  get_position (detector, position);
 	  elam = position[1];
 	  fprintf (stderr, "Detector ephemeris for %s will be created\n",	names[detector]);
-	  EphDir = iniparser_getstring (ini, "general:EphDir", NULL);
-	  efile = iniparser_getstring (ini, "general:efile", NULL);
-	  sfile = iniparser_getstring (ini, "general:sfile", NULL);
+	  EphDir = iniparser_getstring (ini, "genseg:EphDir", NULL);
+	  efile = iniparser_getstring (ini, "genseg:efile", NULL);
+	  sfile = iniparser_getstring (ini, "genseg:sfile", NULL);
 	  sprintf (eFname, "%s/%s", EphDir, efile);
 	  sprintf (sFname, "%s/%s", EphDir, sfile);
 	  if ((edat = XLALInitBarycenter (eFname, sFname)) == NULL) {
