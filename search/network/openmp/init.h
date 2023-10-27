@@ -12,14 +12,14 @@ void read_ini_file(
 void init_arrays(
 		 Search_settings *sett,
 		 Command_line_opts *opts, 
-		 Aux_arrays *aux_arr
-		 );
+		 Aux_arrays *aux_arr);
 
 void add_signal(
 		Search_settings *sett,
 		Command_line_opts *opts,
 		Aux_arrays *aux_arr,
-		Search_range *s_range);
+		Search_range *s_range, 
+    	char *line);
 
 void set_search_range(
 		      Search_settings *sett, 
@@ -48,8 +48,8 @@ void cleanup(
 	     Search_range *s_range,
 	     FFTW_plans *plans,
 	     FFTW_arrays *fftw_arr,
-	     Aux_arrays *aux
-	     );
+	     Aux_arrays *aux);
+
 
 // Coincidences specific functions 
 void handle_opts_coinc(
@@ -58,10 +58,9 @@ void handle_opts_coinc(
 		       int argc,  
 		       char* argv[]);  
 
-void manage_grid_matrix_old( Search_settings *sett,
-			     Command_line_opts_coinc *opts);
-
-void manage_grid_matrix( Search_settings *sett, char *gridfile );
+void manage_grid_matrix(
+				Search_settings *sett, 
+				char *gridfile);
 
 void convert_to_linear(
 		       Search_settings *sett,

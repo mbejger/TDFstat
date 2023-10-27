@@ -606,9 +606,10 @@ void add_signal(
 		Search_settings *sett,
 		Command_line_opts *opts,
 		Aux_arrays *aux_arr,
-		Search_range *s_range) {
+		Search_range *s_range, 
+    char *line) {
 
-  int i, j, n, gsize, reffr; 
+  int i, j, n, reffr; 
   double snr=0, sum = 0., h0=0, cof, d1; 
   double sigma_noise = 1.0;
   double be[2];
@@ -616,50 +617,39 @@ void add_signal(
   double nSource[3], sgnlo[8], sgnlol[4];
  
   char amporsnr[4];  
- 
-  FILE *data;
-  
-  // Signal parameters are read
-  if ((data=fopen (opts->addsig, "r")) != NULL) {
-	
-    // Fscanning for the GW amplitude h0 or signal-to-noise,  
-    // the grid size and the reference frame 
-    // (for which the signal freq. is not spun-down/up)
 
-    do {  
-	fscanf (data, "%s", amporsnr);
-    } while ( strcmp(amporsnr, "amp")!=0 && strcmp(amporsnr, "snr")!=0 );
+  do { 
+    sscanf (line, "%s", amporsnr);
+  } while ( strcmp(amporsnr, "amp")!=0 && strcmp(amporsnr, "snr")!=0 );
 
-    if(!strcmp(amporsnr, "amp")) { 
-      fscanf (data, "%le %d %d", &h0, &gsize, &reffr); 
+
+  // check if signal contains information on GW amplitude or SNR
+  // other parameters are grid ranges in f, s d and a, the reference segment number 
+  // frequency: sgnlo[0], spindown: sgnlo[1], declination: sgnlo[2], right ascension: sgnlo[3], 
+  // sgnlo[4]-sgnlo[7]: 4 variables related to orientation of the source (see sigen.c)
+  if(!strcmp(amporsnr, "amp")) { 
+      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le %le", 
+        &h0, &s_range->gsize_f, &s_range->gsize_s, &s_range->gsize_m, &s_range->gsize_n, &reffr, 
+        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6, sgnlo+7); 
       printf("add_signal(): GW amplitude h0 is %le\n", h0); 
     } else if(!strcmp(amporsnr, "snr")) { 
-      fscanf (data, "%le %d %d", &snr, &gsize, &reffr); 
+      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le %le", 
+        &snr, &s_range->gsize_f, &s_range->gsize_s, &s_range->gsize_m, &s_range->gsize_n, &reffr, 
+        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6, sgnlo+7);  
       printf("add_signal(): GW (network) signal-to-noise ratio is %le\n", snr); 
     } else { 
-      printf("Problem with the signal file. Exiting...\n"); 
+      printf("Problem with the signal parameters (neither amp nor snr). Exiting...\n"); 
       exit(0); 
     } 
 
-    // Fscanning signal parameters: f, fdot, delta, alpha (sgnlo[0], ..., sgnlo[3])
-    // four amplitudes sgnlo[4], ..., sgnlo[7] 
-    // (see sigen.c and Phys. Rev. D 82, 022005 2010, Eqs. 2.13a-d) 
-
-    for(i=0; i<8; i++)
-      fscanf(data, "%le",i+sgnlo); 
-    
-    fclose (data);
-                 
-  } else {
-    perror (opts->addsig);
-  }
-  
   // Search-specific parametrization of freq. 
   // for the software injections
   // sgnlo[0]: frequency, sgnlo[1]: frequency. derivative  
  
   sgnlo[0] += -2.*sgnlo[1]*(sett->N)*(reffr - opts->seg); 
- 
+
+  s_range->freq_inj = sgnlo[0];
+
   // Check if the signal is in band 
 /*
   if(sgnlo[0]<0) exit(171);          // &laquo;  
@@ -703,16 +693,25 @@ void add_signal(
   gsl_permutation_free (p);
   gsl_vector_free (x);
   free (MM);
-  
-  // Define the grid range in which the signal will be looked for
-  s_range->spndr[1] = s_range->spndr[0] + gsize;
-  s_range->spndr[0] -= gsize;
-  s_range->nr[1] = s_range->nr[0] + 1; 
-  s_range->nr[0] -= 1;
-  s_range->mr[1] = s_range->mr[0] + 1; 
-  s_range->mr[0] -= 1;
-  s_range->pmr[1] = s_range->pmr[0]; 
-  
+ 
+  // Define the grid ranges in which the signal will be looked for
+  // +- grid ranges in each direction are defined by gsize_X
+  s_range->spndr[1] = s_range->spndr[0] + s_range->gsize_s;
+  s_range->spndr[0] -= s_range->gsize_s;
+  s_range->nr[1] = s_range->nr[0] + s_range->gsize_n; 
+  s_range->nr[0] -= s_range->gsize_n;
+  s_range->mr[1] = s_range->mr[0] + s_range->gsize_m; 
+  s_range->mr[0] -= s_range->gsize_m;
+  // This variable sets the hemisphere number 
+  s_range->pmr[1] = s_range->pmr[0];  
+
+  //#mb starting values for the loops for spindown, sky and hemispheres 
+  //redundant?  
+  s_range->sst = s_range->spndr[0];
+  s_range->nst = s_range->nr[0];
+  s_range->mst = s_range->mr[0];
+  s_range->pst = s_range->pmr[0];
+
   printf("add_signal(): following grid range is used (spndr, nr, mr, pmr pairs)\n");
   printf("%d %d %d %d %d %d %d %d\n", \
    s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
@@ -786,7 +785,10 @@ void add_signal(
 
       // Adding the signal to the data vector 
       if(ifo[n].sig.xDat[i]) { 
-        ifo[n].sig.xDat[i] += h0*signadd[n][i];
+//#mb 
+//        ifo[n].sig.xDat[i] += h0*signadd[n][i];
+        ifo[n].sig.xDat[i] = h0*signadd[n][i];
+
 
       } 
 
@@ -802,7 +804,6 @@ void add_signal(
   free(signadd);
  
 } // add_signal()
-
 
 
 /* Search range */ 
@@ -1374,121 +1375,6 @@ void handle_opts_coinc( Search_settings *sett,
   
 } // end of command line options handling: coincidences  
 
-
-#if 0
-/* Manage grid matrix (read from grid.bin, find eigenvalues 
- * and eigenvectors) and reference GPS time from starting_time
- * (expected to be in the same directory)    
- */ 
-
-void manage_grid_matrix_old(
-	Search_settings *sett, 
-	Command_line_opts_coinc *opts) {
-
-  sett->M = (double *)calloc(16, sizeof (double));
-
-  FILE *data;
-  char filename[522];
-  sprintf (filename, "%s/grid.bin", opts->refloc);
-
-  if ((data=fopen (filename, "r")) != NULL) {
-
-    printf("Reading the reference grid.bin at %s\n", opts->refloc);
-
-    fread ((void *)&sett->fftpad, sizeof (int), 1, data);
-
-	printf("fftpad from the grid file: %d\n", sett->fftpad); 
-	
-    fread ((void *)sett->M, sizeof(double), 16, data);
-    // We actually need the second (Fisher) matrix from grid.bin, 
-    // hence the second fread: 
-    fread ((void *)sett->M, sizeof(double), 16, data);
-    fclose (data);
-  } else {
-	  perror (filename);
-      exit(EXIT_FAILURE);
-  }
-
-/* //#mb seems not needed at the moment 
-  sprintf (filename, "%s/starting_date", opts->refloc);
-  
-  if ((data=fopen (filename, "r")) != NULL) {
-    fscanf(data, "%le", &opts->refgps);
-
-    printf("Reading the reference starting_date file at %s The GPS time is %12f\n", opts->refloc, opts->refgps);
-    fclose (data);
-  } else {
-      perror (filename);
-      exit(EXIT_FAILURE);
-  }
-*/ 
-
-  // Calculating the eigenvectors and eigenvalues 
-  gsl_matrix_view m = gsl_matrix_view_array(sett->M, 4, 4);
-
-  gsl_vector *eval = gsl_vector_alloc(4);
-  gsl_matrix *evec = gsl_matrix_alloc(4, 4);
-
-  gsl_eigen_symmv_workspace *w = gsl_eigen_symmv_alloc(4); 
-  gsl_eigen_symmv(&m.matrix, eval, evec, w);
-  gsl_eigen_symmv_free(w);
-
-  double eigval[4], eigvec[4][4]; 
-  // Saving the results to the settings struct sett->vedva[][]
-  { int i, j;
-    for(i=0; i<4; i++) { 
-      eigval[i] = gsl_vector_get(eval, i); 
-      gsl_vector_view evec_i = gsl_matrix_column(evec, i);
-
-      for(j=0; j<4; j++)   
-        eigvec[j][i] = gsl_vector_get(&evec_i.vector, j);               
-    } 
-
-    // This is an auxiliary matrix composed of the eigenvector 
-    // columns multiplied by a matrix with sqrt(eigenvalues) on diagonal  
-    for(i=0; i<4; i++) { 
-      for(j=0; j<4; j++) { 
-        sett->vedva[i][j]  = eigvec[i][j]*sqrt(eigval[j]); 
-//        printf("%.12le ", sett->vedva[i][j]); 
-      } 
-//      printf("\n"); 
-    }
-      
-  } 
-
-/* 
-  //#mb matrix generated in matlab, for tests 
-  double _tmp[4][4] = { 
-    {-2.8622034614137332e-001, -3.7566564762376159e-002, -4.4001551065376701e-012, -3.4516253934827171e-012}, 
-    {-2.9591999145463371e-001, 3.6335210834374479e-002, 8.1252443441098394e-014, -6.8170555119669981e-014}, 
-    {1.5497867603229576e-005, 1.9167007413107127e-006, 1.0599051611325639e-008, -5.0379548388381567e-008}, 
-    {2.4410008440913992e-005, 3.2886518554938671e-006, -5.7338464150027107e-008, -9.3126913365595100e-009},
-  };
-
-  { int i,j; 
-  for(i=0; i<4; i++) 
-    for(j=0; j<4; j++) 
-      sett->vedva[i][j]  = _tmp[i][j]; 
-  }
-
-  printf("\n"); 
-
-  { int i, j; 
-  for(i=0; i<4; i++) { 
-    for(j=0; j<4; j++) {
-        printf("%.12le ", sett->vedva[i][j]);
-      }
-      printf("\n"); 
-  } 
-
- } 
-*/ 
-
-  gsl_vector_free (eval);
-  gsl_matrix_free (evec);
-
-} // end of manage grid matrix  
-#endif
 
 void manage_grid_matrix( Search_settings *sett, char *gridfile ) {
 

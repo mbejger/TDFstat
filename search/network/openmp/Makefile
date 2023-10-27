@@ -1,10 +1,10 @@
 # arch to compile for; min. required for SLEEF is haswell (AVX2+FMA)
-ARCH = cascadelake
+ARCH = native #cascadelake
 
 # SIMD = [AVX2, AVX512, NONE] ; explicit optimizations with SIMD instructions.
 # SIMD=NONE implies usege of sincos function, otherwise the SLEEF library is used.
 # It does not affect SIMD optimizations by compiler and FFTW3 dispatchers.
-SIMD = AVX2
+SIMD = NONE 
 # legacy option: USE_AVX2_SINCOS 
 
 # PREC = [FLOAT, DOUBLE] precission used in the spindown loop and for output
@@ -38,7 +38,7 @@ else
 	FFTW_FLOAT_LIBS =
 endif
 
-TARGET = gwsearch-${ARCH}-$(shell echo $(PERF) | tr A-Z a-z)
+TARGET = gwsearch-${ARCH} #-$(shell echo $(PERF) | tr A-Z a-z)
 
 VER := $(shell git rev-parse HEAD)
 

@@ -27,7 +27,11 @@ typedef struct _comm_line_opts {
   double fpo_val, narrowdown, overlap;
   
   const char *indir, *outdir, *range_file, *dump_range_file,
-             *usedet, *addsig, *fstat_norm, *label;
+             *usedet, *addsig, *fstat_norm, *label; 
+
+  //#mb To label triggers' files for the software injections
+  // label sigXXX 
+  char si_label[16];
 
   char state_file[FNAME_LENGTH];
 
@@ -70,8 +74,15 @@ typedef struct _fftw_arrays {
   /* Search range  */ 
 
 typedef struct _search_range {
-  int pmr[2], mr[2], nr[2], spndr[2];
-  int pst, mst, nst, sst;
+  int pmr[2], mr[2], nr[2], spndr[2], fr[2];
+
+  // in case of signal injection, +- gside in each f-s-d-a direction 
+  int gsize_f, gsize_s, gsize_m, gsize_n;  
+  int pst, mst, nst, sst, fst; //#mb redundant? 
+
+  // Injection frequency in bandwidth units (0, 2\pi)
+  float freq_inj; 
+
 } Search_range;
 
 

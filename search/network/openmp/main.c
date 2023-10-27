@@ -93,28 +93,56 @@ int main (int argc, char* argv[]) {
   for(i=0; i<sett.nifo; i++)   
     rogcvir(&ifo[i]); 
 
-  // Grid search range
-  if(strlen(opts.addsig)) { 
-    // If addsig switch used, add signal from file, 
-    // search around this position (+- gsize)
-    add_signal(&sett, &opts, &aux_arr, &s_range); 
-  } else 
-    // Set search range from range file  
-    set_search_range(&sett, &opts, &s_range);
-
   // FFT plans 
   FFTW_plans fftw_plans;
   FFTW_arrays fftw_arr;
   plan_fftw(&sett, &opts, &fftw_plans, &fftw_arr, &aux_arr);
 
-  // Checkpointing
-  int Fnum=0;	// candidate signal number
-  read_checkpoints(&opts, &s_range, &Fnum);
+  // If addsig switch is used, signal(s) parameters are read from file, 
+  // and search around signal's position (+- gsize, defined in file) is performed 
+  if(strlen(opts.addsig)) { 
 
-  // main search job
-  search(&sett, &opts, &s_range, 
-         &fftw_plans, &fftw_arr, &aux_arr,
-	 &Fnum);
+    FILE *fp;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    fp = fopen(opts.addsig, "r");
+    if (fp == NULL) exit(EXIT_FAILURE);
+
+    // signal counter (line number in file) 
+    int sid = 0;     
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+
+        sprintf(opts.si_label, "sig%03d", sid);
+
+        add_signal(&sett, &opts, &aux_arr, &s_range, line);
+
+        int Fnum=0;	// candidate signal number
+
+        // main search job
+        search(&sett, &opts, &s_range, 
+            &fftw_plans, &fftw_arr, &aux_arr, &Fnum);
+
+        sid++; 
+
+    } 
+
+  // normal run 
+  } else {  
+
+    // Set search range (either maximal range or from an optional range file)  
+    set_search_range(&sett, &opts, &s_range);
+
+    // Checkpointing
+    int Fnum=0;	// candidate signal number
+    read_checkpoints(&opts, &s_range, &Fnum);
+
+    // main search job
+    search(&sett, &opts, &s_range, 
+         &fftw_plans, &fftw_arr, &aux_arr, &Fnum);
+  } 
 
   // state file is emptied and closed in jobcore to mark successful end
   // do not remove it here
