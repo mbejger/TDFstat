@@ -613,7 +613,7 @@ void add_signal(
   double snr=0, sum = 0., h0=0, cof, d1; 
   double sigma_noise = 1.0;
   double be[2];
-  double sinaadd, cosaadd, sindadd, cosdadd, phaseadd, shiftadd; 
+  double al1, al2, sinalt, cosalt, sindelt, cosdelt, phaseadd, shiftadd; 
   double nSource[3], sgnlo[8], sgnlol[4];
  
   char amporsnr[4];  
@@ -642,19 +642,21 @@ void add_signal(
       exit(0); 
     } 
 
-  // Search-specific parametrization of freq. 
-  // for the software injections
+  // Search-specific parametrization of freq. for software injections
+  // i.e. shifting the freq. to current time segment 
   // sgnlo[0]: frequency, sgnlo[1]: frequency. derivative  
- 
   sgnlo[0] += -2.*sgnlo[1]*(sett->N)*(reffr - opts->seg); 
 
+  // Check if the signal is in band 
+  if( sgnlo[0]<0 || sgnlo[0]>M_PI ) {
+      printf("add_signal(): signal out of band f=%le s=%le\n", sgnlo[0], sgnlo[1]);
+      return;
+  }
+
+  // Saving the injection frequency in s_range struct 
   s_range->freq_inj = sgnlo[0];
 
-  // Check if the signal is in band 
-/*
-  if(sgnlo[0]<0) exit(171);          // &laquo;  
-  else if (sgnlo[0]>M_PI) exit(187); // &raquo;
-*/
+  //Below we solve 
 
   cof = sett->oms + sgnlo[0]; 
   
@@ -665,35 +667,39 @@ void add_signal(
 
   sgnlol[2] = be[0]*cof;  
   sgnlol[3] = be[1]*cof; 
-
- 		 	
+	 	
   // solving a linear system in order to translate 
-  // sky position, frequency and spindown (sgnlo parameters) 
-  // into the position in the grid
+  // spindown and sky positions (sgnlo parameters) 
+  // into the grid coordinates 
+  // Writes to: s_range->spndr[0], s_range->nr[0], s_range->mr[0]
+  sda_to_grid(sett, s_range, sgnlol); 
 
-  double *MM ; 
-  MM = (double *) calloc (16, sizeof (double));
-  for(i=0; i<16; i++) MM[i] = sett->M[i] ;
-  
-  gsl_vector *x = gsl_vector_alloc (4);     
-  int s;
-  
-  gsl_matrix_view m = gsl_matrix_view_array (MM, 4, 4);
-  gsl_matrix_transpose (&m.matrix) ; 
-  gsl_vector_view b = gsl_vector_view_array (sgnlol, 4);
-  gsl_permutation *p = gsl_permutation_alloc (4);
-  
-  gsl_linalg_LU_decomp (&m.matrix, p, &s);
-  gsl_linalg_LU_solve (&m.matrix, p, &b.vector, x);
-  
-  s_range->spndr[0] = round(gsl_vector_get(x,1)); 
-  s_range->nr[0]    = round(gsl_vector_get(x,2));
-  s_range->mr[0]    = round(gsl_vector_get(x,3));
-  
-  gsl_permutation_free (p);
-  gsl_vector_free (x);
-  free (MM);
+  // Grid positions
+  al1 = s_range->nr[0]*sett->M[10] + s_range->mr[0]*sett->M[14];
+  al2 = s_range->nr[0]*sett->M[11] + s_range->mr[0]*sett->M[15];
  
+  // Change linear (grid) coordinates to real coordinates
+  lin2ast(al1/sett->oms, al2/sett->oms, 
+	  s_range->pmr[0], sett->sepsm, sett->cepsm,
+	  &sinalt, &cosalt, &sindelt, &cosdelt);
+
+  // calculate declination and right ascention
+  // written in file as candidate signal sky positions
+  sgnlo[2] = asin(sindelt);
+  sgnlo[3] = fmod(atan2(sinalt, cosalt) + 2.*M_PI, 2.*M_PI);
+
+  // Calculate the hemisphere and be vector 
+  s_range->pmr[0] = ast2lin(sgnlo[3], sgnlo[2], C_EPSMA, be);
+
+  sgnlol[2] = be[0]*cof;  
+  sgnlol[3] = be[1]*cof; 
+	 	
+  // solving a linear system for the second time in order to 
+  // re-calculate the spindown position for the new sky positions 
+  // which now match the grid point exactly 
+  sda_to_grid(sett, s_range, sgnlol); 
+
+
   // Define the grid ranges in which the signal will be looked for
   // +- grid ranges in each direction are defined by gsize_X
   s_range->spndr[1] = s_range->spndr[0] + s_range->gsize_s;
@@ -717,18 +723,6 @@ void add_signal(
    s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
    s_range->mr[0], s_range->mr[1], s_range->pmr[0], s_range->pmr[1]);
 
-  // Check if the signal is in band 
-  if( sgnlo[0]<0 || sgnlo[0]>M_PI ) {
-      printf("add_signal(): signal out of band f=%le s=%le\n", sgnlo[0], sgnlo[1]);
-      return;
-  }
-
-  // sgnlo[2]: declination, sgnlo[3]: right ascension 
-  sindadd = sin(sgnlo[2]); 
-  cosdadd = cos(sgnlo[2]); 
-  sinaadd = sin(sgnlo[3]);  
-  cosaadd = cos(sgnlo[3]); 
-	
   // To keep coherent phase between time segments  
   double phaseshift = sgnlo[0]*sett->N*(reffr - opts->seg)   
     + sgnlo[1]*pow(sett->N*(reffr - opts->seg), 2); 
@@ -742,12 +736,12 @@ void add_signal(
   // Loop for each detector - sum calculations
   for(n=0; n<sett->nifo; n++) {
     
-    modvir(sinaadd, cosaadd, sindadd, cosdadd,
+    modvir(sinalt, cosalt, sindelt, cosdelt,
 	   sett->N, &ifo[n], aux_arr);
 
-    nSource[0] = cosaadd*cosdadd;
-    nSource[1] = sinaadd*cosdadd;
-    nSource[2] = sindadd;
+    nSource[0] = cosalt*cosdelt;
+    nSource[1] = sinalt*cosdelt;
+    nSource[2] = sindelt;
 					
     for (i=0; i<sett->N; i++) {
       
@@ -786,8 +780,8 @@ void add_signal(
       // Adding the signal to the data vector 
       if(ifo[n].sig.xDat[i]) { 
 //#mb 
-//        ifo[n].sig.xDat[i] += h0*signadd[n][i];
-        ifo[n].sig.xDat[i] = h0*signadd[n][i];
+        ifo[n].sig.xDat[i] += h0*signadd[n][i];
+//        ifo[n].sig.xDat[i] = h0*signadd[n][i];
 
 
       } 
@@ -804,6 +798,36 @@ void add_signal(
   free(signadd);
  
 } // add_signal()
+
+
+void sda_to_grid(Search_settings *sett,
+		Search_range *s_range, 
+		double sgnlol[]) { 
+
+  int i, s; 
+  double *MM; 
+  MM = (double *) calloc (16, sizeof (double));
+  for(i=0; i<16; i++) MM[i] = sett->M[i] ;
+  
+  gsl_vector *x = gsl_vector_alloc (4);     
+  
+  gsl_matrix_view m = gsl_matrix_view_array (MM, 4, 4);
+  gsl_matrix_transpose (&m.matrix) ; 
+  gsl_vector_view b = gsl_vector_view_array (sgnlol, 4);
+  gsl_permutation *p = gsl_permutation_alloc (4);
+  
+  gsl_linalg_LU_decomp (&m.matrix, p, &s);
+  gsl_linalg_LU_solve (&m.matrix, p, &b.vector, x);
+  
+  s_range->spndr[0] = round(gsl_vector_get(x,1)); 
+  s_range->nr[0]    = round(gsl_vector_get(x,2));
+  s_range->mr[0]    = round(gsl_vector_get(x,3));
+  
+  gsl_permutation_free (p);
+  gsl_vector_free (x);
+  free (MM);
+
+} 
 
 
 /* Search range */ 

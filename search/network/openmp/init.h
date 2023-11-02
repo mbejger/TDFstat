@@ -21,6 +21,11 @@ void add_signal(
 		Search_range *s_range, 
     	char *line);
 
+void sda_to_grid(
+		Search_settings *sett,
+		Search_range *s_range, 
+		double sgnlol[]); 		
+
 void set_search_range(
 		      Search_settings *sett, 
 		      Command_line_opts *opts, 
