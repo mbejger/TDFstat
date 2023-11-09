@@ -111,7 +111,7 @@ int main (int argc, char* argv[]) {
     if (fp == NULL) exit(EXIT_FAILURE);
 
     // signal counter (line number in file) 
-    int sid = 0;     
+    int sid = 1;     
 
     while ((read = getline(&line, &len, fp)) != -1) {
 

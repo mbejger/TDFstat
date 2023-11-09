@@ -613,8 +613,9 @@ void add_signal(
   double snr=0, sum = 0., h0=0, cof, d1; 
   double sigma_noise = 1.0;
   double be[2];
-  double al1, al2, sinalt, cosalt, sindelt, cosdelt, phaseadd, shiftadd; 
-  double nSource[3], sgnlo[8], sgnlol[4];
+  double al1, al2, sinalt, cosalt, sindelt, cosdelt, phaseadd, shiftadd;
+  double ph_o, psik, hoc, hop, iota, intrang[3]; 
+  double nSource[3], sgnlo[7], sgnlol[4];
  
   char amporsnr[4];  
 
@@ -628,14 +629,14 @@ void add_signal(
   // frequency: sgnlo[0], spindown: sgnlo[1], declination: sgnlo[2], right ascension: sgnlo[3], 
   // sgnlo[4]-sgnlo[7]: 4 variables related to orientation of the source (see sigen.c)
   if(!strcmp(amporsnr, "amp")) { 
-      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le %le", 
+      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le", 
         &h0, &s_range->gsize_f, &s_range->gsize_s, &s_range->gsize_m, &s_range->gsize_n, &reffr, 
-        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6, sgnlo+7); 
+        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6); 
       printf("add_signal(): GW amplitude h0 is %le\n", h0); 
     } else if(!strcmp(amporsnr, "snr")) { 
-      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le %le", 
+      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le", 
         &snr, &s_range->gsize_f, &s_range->gsize_s, &s_range->gsize_m, &s_range->gsize_n, &reffr, 
-        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6, sgnlo+7);  
+        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6);  
       printf("add_signal(): GW (network) signal-to-noise ratio is %le\n", snr); 
     } else { 
       printf("Problem with the signal parameters (neither amp nor snr). Exiting...\n"); 
@@ -656,7 +657,7 @@ void add_signal(
   // Saving the injection frequency in s_range struct 
   s_range->freq_inj = sgnlo[0];
 
-  //Below we solve 
+  //#mb explanation of what is going on below  
 
   cof = sett->oms + sgnlo[0]; 
   
@@ -723,15 +724,28 @@ void add_signal(
    s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
    s_range->mr[0], s_range->mr[1], s_range->pmr[0], s_range->pmr[1]);
 
+  // Intrinsic parameters of the signal: phase, polarization, inclination wobble angle iota 
+  ph_o = sgnlo[4];    
+  psik = sgnlo[5];    
+  hoc =  cos(sgnlo[6]); // sgnlo[6] = iota = acos(hoc)   
+  hop = (1. + hoc*hoc)/2.; 
+
+  intrang[0] =  cos(2.*psik)*hop*cos(ph_o) - sin(2.*psik)*hoc*sin(ph_o) ;
+  intrang[1] =  sin(2.*psik)*hop*cos(ph_o) + cos(2.*psik)*hoc*sin(ph_o) ;
+  intrang[2] = -cos(2.*psik)*hop*sin(ph_o) - sin(2.*psik)*hoc*cos(ph_o) ;
+  intrang[3] = -sin(2.*psik)*hop*sin(ph_o) + cos(2.*psik)*hoc*cos(ph_o) ;
+
   // To keep coherent phase between time segments  
   double phaseshift = sgnlo[0]*sett->N*(reffr - opts->seg)   
     + sgnlo[1]*pow(sett->N*(reffr - opts->seg), 2); 
-
 
   // Allocate arrays for added signal, for each detector 
   double **signadd = malloc((sett->nifo)*sizeof(double *));
   for(n=0; n<sett->nifo; n++)
     signadd[n] = malloc((sett->N)*sizeof(double));
+
+  printf("%s %.8le %.8le %.8le %.8le %.8le %.8le %.8le\n", 
+    opts->si_label, sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3], sgnlo[4], sgnlo[5], sgnlo[6]); 
 
   // Loop for each detector - sum calculations
   for(n=0; n<sett->nifo; n++) {
@@ -755,10 +769,10 @@ void add_signal(
         - phaseshift; 
 
       // The whole signal with 4 amplitudes and modulations 
-      signadd[n][i] = sgnlo[4]*(ifo[n].sig.aa[i])*cos(phaseadd) 
-                    + sgnlo[6]*(ifo[n].sig.aa[i])*sin(phaseadd) 
-                    + sgnlo[5]*(ifo[n].sig.bb[i])*cos(phaseadd) 
-                    + sgnlo[7]*(ifo[n].sig.bb[i])*sin(phaseadd);
+      signadd[n][i] = intrang[0]*(ifo[n].sig.aa[i])*cos(phaseadd) 
+                    + intrang[1]*(ifo[n].sig.aa[i])*sin(phaseadd) 
+                    + intrang[2]*(ifo[n].sig.bb[i])*cos(phaseadd) 
+                    + intrang[3]*(ifo[n].sig.bb[i])*sin(phaseadd);
 
       // Sum over signals
       sum += pow(signadd[n][i], 2.);
@@ -780,8 +794,8 @@ void add_signal(
       // Adding the signal to the data vector 
       if(ifo[n].sig.xDat[i]) { 
 //#mb 
-        ifo[n].sig.xDat[i] += h0*signadd[n][i];
-//        ifo[n].sig.xDat[i] = h0*signadd[n][i];
+//        ifo[n].sig.xDat[i] += h0*signadd[n][i];
+        ifo[n].sig.xDat[i] = h0*signadd[n][i];
 
 
       } 

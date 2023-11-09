@@ -7,8 +7,10 @@
 #include <getopt.h>
 
 #include "auxi.h"
-#include "settings.h"
 #include "struct.h"
+#include "settings.h"
+
+Detector_settings ifo[MAX_DETECTORS]; 
 
 static int help_flag=0;
 
@@ -16,7 +18,7 @@ double get_rand() ;
 
 int main(int argc, char *argv[]) {
   
-  int i, numl=0, freq_line_check, c, pm, gsize=2, band=0, reffr, nfrinband; 
+  int i, numl=0, freq_line_check, c, pm, gsize_f=32, gsize_s=16, gsize_m=0, gsize_n=0, band=0, reffr, nfrinband; 
   char filename[512], dtaprefix[512], *wd=NULL ; 
   double amp=0, snr=0;
   double freql[32768], linew[32768], sgnlo[8], rrn[2], 
@@ -28,7 +30,7 @@ int main(int argc, char *argv[]) {
   
   Search_settings sett;
 
-  //#mb fftpad value=1 (default for some time now) 
+  // fftpad value set by default to  1 
   sett.fftpad = 1; 
 
   // Default data sampling time (s)  
@@ -56,7 +58,7 @@ int main(int argc, char *argv[]) {
       // GW amplitude 
       {"amp", required_argument, 0, 'a'},
       // SNR
-      {"snr", required_argument, 0, 'n'},
+      {"snr", required_argument, 0, 's'},
       // frequency band number 
       {"band", required_argument, 0, 'b'},
       // band overlap 
@@ -65,10 +67,16 @@ int main(int argc, char *argv[]) {
       {"cwd", required_argument, 0, 'c'},
       // fpo value
       {"fpo", required_argument, 0, 'p'},
-      // grid search range 
-      {"gsize", required_argument, 0, 'g'},
+      // grid search range in f 
+      {"gsize_f", required_argument, 0, 'k'},
+      // grid search range in s 
+      {"gsize_s", required_argument, 0, 'l'},
+      // grid search range in m
+      {"gsize_m", required_argument, 0, 'm'},
+      // grid search range in n
+      {"gsize_n", required_argument, 0, 'n'},
       // data sampling time 
-      {"dt", required_argument, 0, 's'},
+      {"dt", required_argument, 0, 't'},
       // reference frame () 
       {"reffr", required_argument, 0, 'r'},
       // +/- frames from reference to keep the signal inband
@@ -89,7 +97,10 @@ int main(int argc, char *argv[]) {
       printf("-overlap  Band overlap\n"); 
       printf("-cwd      Change to directory <dir>\n");     
       printf("-fpo      fpo (starting frequency) value\n");
-      printf("-gsize    Grid search range (default value: 2)\n");
+      printf("-gsize_f  +- grid range in f direction (default value: 32)\n");
+      printf("-gsize_s  +- grid range in d direction (default value: 16)\n");
+      printf("-gsize_m  +- grid range in m direction (default value: 0)\n");
+      printf("-gsize_n  +- grid range in n direction (default value: 0)\n");
       printf("-dt       Data sampling time dt (default value: 0.5)\n");
       printf("-nod      Number of days\n");
       printf("-reffr    Reference frame (default value: 1)\n");
@@ -100,7 +111,7 @@ int main(int argc, char *argv[]) {
     }
 
     int option_index = 0;
-    c = getopt_long_only (argc, argv, "a:n:b:v:c:p:g:s:r:i:y:", long_options, &option_index);
+    c = getopt_long_only (argc, argv, "a:s:b:v:c:p:k:l:m:n:t:r:i:y:", long_options, &option_index);
     
     if (c == -1)
       break;
@@ -108,7 +119,7 @@ int main(int argc, char *argv[]) {
      case 'a':
       amp  = atof (optarg);
       break; 
-    case 'n':
+    case 's':
       snr  = atof (optarg);
       break; 
     case 'b':
@@ -121,13 +132,22 @@ int main(int argc, char *argv[]) {
       wd = (char *) malloc (1+strlen(optarg));
       strcpy (wd, optarg);
       break;      
-    case 'g':
-      gsize = atoi (optarg);
+    case 'k':
+      gsize_f = atoi (optarg);
+      break;
+    case 'l':
+      gsize_s = atoi (optarg);
+      break;
+    case 'm':
+      gsize_m = atoi (optarg);
+      break;
+    case 'n':
+      gsize_n = atoi (optarg);
       break;
     case 'p':
       fpo_val = atof(optarg);
       break;
-    case 's':
+    case 't':
       sett.dt = atof(optarg);
       break;
     case 'r':
@@ -228,7 +248,7 @@ int main(int argc, char *argv[]) {
 
   // Random sky position such that the signal is on the grid 
   // (inner loop), but is far enough from the poles (outer loop) 
-  //#mv outer loop not used now (O3) 
+  //#mb outer loop not used now (O3) 
 
   // Uniform sphere sampling algorithm 
   double x1, x2, X, Y, Z; 
@@ -253,46 +273,27 @@ int main(int argc, char *argv[]) {
   ph_o = 2.*M_PI*get_rand();    
   psik = 2.*M_PI*get_rand();    
   hoc =  2.*get_rand() - 1.;   
-  hop = (1. + hoc*hoc)/2.; 
+  //hop = (1. + hoc*hoc)/2.; 
   iota = acos(hoc);
 
+/* #mb this is now being calculated in add_signal() 
   sgnlo[4] =  cos(2.*psik)*hop*cos(ph_o) - sin(2.*psik)*hoc*sin(ph_o) ;
   sgnlo[5] =  sin(2.*psik)*hop*cos(ph_o) + cos(2.*psik)*hoc*sin(ph_o) ;
   sgnlo[6] = -cos(2.*psik)*hop*sin(ph_o) - sin(2.*psik)*hoc*cos(ph_o) ;
   sgnlo[7] = -sin(2.*psik)*hop*sin(ph_o) + cos(2.*psik)*hoc*cos(ph_o) ;
+*/
 
   // Output (GW amplitude or signal-to-noise ratio)  
   if(amp) 
-    printf("amp %le\n%d\n%d\n", amp, gsize, reffr);   		 
+    printf("amp %le ", amp);   		 
   else if(snr) 
-    printf("snr %le\n%d\n%d\n", snr, gsize, reffr);
+    printf("snr %le ", snr);
 
-  printf("%.16le\n%.16le\n%.16le\n%.16le\n%.16le\n%.16le\n%.16le\n%.16le\n", 
+  printf("%d %d %d %d %d ", gsize_f, gsize_s, gsize_m, gsize_n, reffr); 
+  printf("%.8le %.8le %.8le %.8le %.8le %.8le %.8le\n", 
 	 sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3], 
-	 sgnlo[4], sgnlo[5], sgnlo[6], sgnlo[7]);
-
+   ph_o, psik, iota); 
   
-  //printf("%.16le %.16le %.16le %.16le\n", sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3]);
-
- 
-  // Testing printouts	
-/*
-  printf("Random number between 0 and 1: %lf\n", rand1) ; 
-  printf("pm, mm, nn, spnd: %d %d %d %d\n", pm, mm, nn, spnd) ;
-  printf("%le\n%d\n%d\n", amp, gsize, pm) ;
-  printf("rrn[0], rrn[1]: %.16le %.16le\n", rrn[0], rrn[1]) ; 
-  
-  printf("sgnlo[0]: %.16le\nsgnlo[1]: %.16le\nsgnlo[2]: %.16le\nsgnlo[3]: %.16le\n",
-		sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3]) ;
-  printf("sgnlo[4]: %.16le\nsgnlo[5]: %.16le\nsgnlo[6]: %.16le\nsgnlo[7]: %.16le\n",
-		sgnlo[4], sgnlo[5], sgnlo[6], sgnlo[7]) ;		
-  printf("be1: %.16le\nbe2: %.16le\n", be1, be2) ; 
-  
-  printf("iota, ph_o, psik: %.8lf %.8lf %.8lf\nhop, hoc: %.8lf %.8lf\n", 
-		 iota, ph_o, psik, hop, hoc) ;
- 
-*/
- 		 
   return 0;
 
 } // sigen()
