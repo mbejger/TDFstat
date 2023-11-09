@@ -69,7 +69,7 @@ veclib:
 	@echo -e "\nUsing prebuild SLEEF library from: $(SPATH)\n"
 endif
 
-SRC = main.c jobcore.c auxi.c settings.c init.c  timer.c spinmod.c
+SRC = main.c jobcore.c auxi.c settings.c init.c timer.c spinmod.c
 INC = jobcore.h settings.h auxi.h timer.h init.h struct.h
 DEPS = $(SRC) $(INC) Makefile
 
@@ -86,5 +86,5 @@ uninstall: clean
 
 #----------------------------------------------
 
-sigen: sigen.o settings.o auxi.o
+sigen: sigen.o auxi.o settings.o  
 	$(CC) -o $@ $^ -Wl,-Bdynamic -lc -lrt -lm
