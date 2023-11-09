@@ -1,0 +1,6 @@
+./gwsearch-native search_001_1234.ini
+./gwsearch-native search_008_1234.ini
+
+./gwsearch-native search_001_4096.ini
+./gwsearch-native search_008_4096.ini
+

@@ -1,0 +1,16 @@
+fshift=$1
+
+for d in $2
+do 
+
+  for t in ${d}/triggers*bin 
+  do 
+
+    n=$(echo $t | sed 's/.*sig//;s/.bin//')
+
+    python3 plot_ffdot_map_cellsize.py ${t} ${fshift} ${d}/test${n}
+
+  done 
+
+done 
+
