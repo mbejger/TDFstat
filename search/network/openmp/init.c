@@ -624,10 +624,11 @@ void add_signal(
   } while ( strcmp(amporsnr, "amp")!=0 && strcmp(amporsnr, "snr")!=0 );
 
 
-  // check if signal contains information on GW amplitude or SNR
-  // other parameters are grid ranges in f, s d and a, the reference segment number 
-  // frequency: sgnlo[0], spindown: sgnlo[1], declination: sgnlo[2], right ascension: sgnlo[3], 
-  // sgnlo[4]-sgnlo[7]: 4 variables related to orientation of the source (see sigen.c)
+  /* check if signal file contains information on GW amplitude or SNR
+    other parameters are grid ranges in f, s d and a, the reference segment number 
+    frequency: sgnlo[0], spindown: sgnlo[1], declination: sgnlo[2], right ascension: sgnlo[3], 
+    sgnlo[4]-sgnlo[6]: 3 variables related to orientation of the source (see sigen.c)
+  */
   if(!strcmp(amporsnr, "amp")) { 
       sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le", 
         &h0, &s_range->gsize_f, &s_range->gsize_s, &s_range->gsize_m, &s_range->gsize_n, &reffr, 
@@ -674,6 +675,9 @@ void add_signal(
   // into the grid coordinates 
   // Writes to: s_range->spndr[0], s_range->nr[0], s_range->mr[0]
   sda_to_grid(sett, s_range, sgnlol); 
+ 
+
+  //#mb start 
 
   // Grid positions
   al1 = s_range->nr[0]*sett->M[10] + s_range->mr[0]*sett->M[14];
@@ -700,6 +704,7 @@ void add_signal(
   // which now match the grid point exactly 
   sda_to_grid(sett, s_range, sgnlol); 
 
+  //#mb end 
 
   // Define the grid ranges in which the signal will be looked for
   // +- grid ranges in each direction are defined by gsize_X
@@ -723,6 +728,12 @@ void add_signal(
   printf("%d %d %d %d %d %d %d %d\n", \
    s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
    s_range->mr[0], s_range->mr[1], s_range->pmr[0], s_range->pmr[1]);
+
+  // sgnlo[2]: declination, sgnlo[3]: right ascension 
+  sindelt = sin(sgnlo[2]); 
+  cosdelt = cos(sgnlo[2]); 
+  sinalt = sin(sgnlo[3]);  
+  cosalt = cos(sgnlo[3]); 
 
   // Intrinsic parameters of the signal: phase, polarization, inclination wobble angle iota 
   ph_o = sgnlo[4];    

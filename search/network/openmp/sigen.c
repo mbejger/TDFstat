@@ -252,20 +252,22 @@ int main(int argc, char *argv[]) {
 
   // Uniform sphere sampling algorithm 
   double x1, x2, X, Y, Z; 
-  //  do {
+  do {
 
-  do { 
       x1 = 2*get_rand() - 1;
       x2 = 2*get_rand() - 1;
-  } while(x1*x1 + x2*x2 >= 1); 
-       
+
+  } while((x1*x1 + x2*x2 >= 1));
+ 
   X = 2*x1*sqrt(1 - x1*x1 - x2*x2);
   Y = 2*x2*sqrt(1 - x1*x1 - x2*x2);
   Z = 1 - 2*(x1*x1 + x2*x2);
   
   // Sky position: declination
   sgnlo[2] = M_PI_2 - acos(Z); 
-  
+
+  if(fabs(sgnlo[2]) < 1.e-01) sgnlo[2] = 1.e-01; 
+
   // Right ascension
   sgnlo[3] = atan2(Y, X) + M_PI; 
 
@@ -276,7 +278,7 @@ int main(int argc, char *argv[]) {
   //hop = (1. + hoc*hoc)/2.; 
   iota = acos(hoc);
 
-/* #mb this is now being calculated in add_signal() 
+/* #mb this is now being calculated in init.c add_signal() 
   sgnlo[4] =  cos(2.*psik)*hop*cos(ph_o) - sin(2.*psik)*hoc*sin(ph_o) ;
   sgnlo[5] =  sin(2.*psik)*hop*cos(ph_o) + cos(2.*psik)*hoc*sin(ph_o) ;
   sgnlo[6] = -cos(2.*psik)*hop*sin(ph_o) - sin(2.*psik)*hoc*cos(ph_o) ;
@@ -304,7 +306,7 @@ int main(int argc, char *argv[]) {
 double get_rand() { 
 	
   FILE *urandom;
-  unsigned int seed;
+  unsigned int seed, status;
 
   urandom = fopen ("/dev/urandom", "r");
   if (urandom == NULL) {
@@ -312,7 +314,7 @@ double get_rand() {
     exit(EXIT_FAILURE);
   }
 
-  fread (&seed, sizeof (seed), 1, urandom);
+  status = fread (&seed, sizeof (seed), 1, urandom);
   srand (seed);
   return ((double)rand()/(double)(RAND_MAX));
 
