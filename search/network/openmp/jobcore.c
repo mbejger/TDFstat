@@ -237,7 +237,10 @@ int job_core(int pm,                   // Hemisphere
 
   // check if the search is in an appropriate region of the grid
   // if not, returns NULL
-  if ((sqr(al1)+sqr(al2))/sqr(sett->oms) > 1.) return 0;
+  if ((sqr(al1)+sqr(al2))/sqr(sett->oms) > 1.) {
+    printf("Outside the sky. Exiting...\n"); 
+    return 0;
+  } 
 
   int ss;
   double shft1, phase, cp, sp;
@@ -450,7 +453,7 @@ int job_core(int pm,                   // Hemisphere
 
       spindown_modulation(sett->nifo, sett->N, het1, sgnlt[1], _tmp1, fxa, fxb);
 
-      // Zero-padding]
+      // Zero-padding
 #pragma omp parallel for schedule(static)
       for(i = sett->nfftf-1; i > sett->N-1; --i)
 	fxa[i] = fxb[i] = (FLOAT_TYPE)0.;
