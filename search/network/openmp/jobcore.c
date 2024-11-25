@@ -70,8 +70,8 @@ void search(
   
   for (pm=s_range->pst; pm<=s_range->pmr[1]; ++pm) {
 
-    sprintf (outname, "%s/triggers_%03d_%04d_%d_%s.bin", 
-	     opts->outdir, opts->seg, opts->band, pm, opts->si_label);
+    sprintf (outname, "%s/triggers_%03d_%04d%s_%d.bin", 
+	     opts->outdir, opts->seg, opts->band, opts->label, pm);
     // remove existing trigger file if checkpointing is disabled
     if(! opts->checkp_flag) remove(outname);
 
@@ -196,7 +196,6 @@ int job_core(int pm,                   // Hemisphere
 	     int *FNum) {              // Candidate signal number
 
   int i, j, n;
-  int ii_inj; 
   int smin = s_range->sst, smax = s_range->spndr[1];
   double al1, al2, sinalt, cosalt, sindelt, cosdelt, 
     nSource[3], ft, het0;
@@ -237,10 +236,7 @@ int job_core(int pm,                   // Hemisphere
 
   // check if the search is in an appropriate region of the grid
   // if not, returns NULL
-  if ((sqr(al1)+sqr(al2))/sqr(sett->oms) > 1.) {
-    printf("Outside the sky. Exiting...\n"); 
-    return 0;
-  } 
+  if ((sqr(al1)+sqr(al2))/sqr(sett->oms) > 1.) return 0;
 
   int ss;
   double shft1, phase, cp, sp;
@@ -453,7 +449,7 @@ int job_core(int pm,                   // Hemisphere
 
       spindown_modulation(sett->nifo, sett->N, het1, sgnlt[1], _tmp1, fxa, fxb);
 
-      // Zero-padding
+      // Zero-padding]
 #pragma omp parallel for schedule(static)
       for(i = sett->nfftf-1; i > sett->N-1; --i)
 	fxa[i] = fxb[i] = (FLOAT_TYPE)0.;
@@ -507,8 +503,6 @@ int job_core(int pm,                   // Hemisphere
       */
 
       /* stay in (nmin, nmax) range! */
-
-/* #mb
       for(i=sett->nmin+1; i<sett->nmax-dd; i+=dd) {
 	int ii=-1;
 	FLOAT_TYPE Fc = opts->thr;
@@ -520,19 +514,6 @@ int job_core(int pm,                   // Hemisphere
 	}
 	
 	if ( ii < 0 ) continue; // no maximum in this block
-*/ 
-
-  //#mb Injection frequency in terms of FFT bins ii 
-  ii_inj = (int)((s_range->freq_inj - sgnl0)*((FLOAT_TYPE)sett->nfftf / (2*M_PI)));  
-
-  //#mb for(i=sett->nmin; i<sett->nmax; ++i) {
-  for(i=ii_inj-s_range->gsize_f; i<=ii_inj+s_range->gsize_f; ++i) {
-
-    if (F[i] < opts->thr) continue;
-    double Fc;
-    int ii;
-    ii = i;
-    Fc = F[i];
 	
 	// Candidate signal frequency
 	sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
@@ -552,17 +533,8 @@ int job_core(int pm,                   // Hemisphere
 	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
 	    exit(EXIT_FAILURE);
 	  }
-
-    //#mb: output to triggers file in the form of ''grid'' values
-    sgnlt[2] = sgnlt[0];
-    sgnlt[3] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
-    sgnlt[0] = ii - ii_inj;
-    sgnlt[1] = ss - (s_range->spndr[1]);
-   
 	  // SNR ; sqrtf precission is suffiecient
-    // sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
-	  //#mb - value of Fc instead of SNR
-	  sgnlt[4] = Fc;
+	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
 
 	  // Add new parameters to the output buffer array
 	  for (j=0; j<NPAR; ++j)
