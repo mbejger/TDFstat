@@ -76,18 +76,20 @@ int main (int argc, char* argv[]) {
   // Search settings
   search_settings(&sett); 
 
-  // Array initialization and reading the ephemerids 
+  // Array initialization, reading in the input data and the ephemerids 
   init_arrays(&sett, &opts, &aux_arr);
 
   // Narrowing-down the band (excluding the edges 
   // according to the opts.narrowdown parameter)
   // adds two lines
   if(opts.narrowdown < 0.5*M_PI) narrow_down_band(&sett, &opts);
-  
+
+/* #mb commented out for now   
   // Reading veto lines data from external files
   printf("Reading veto files...\n");
   read_lines(&sett, &opts);
   if (opts.gen_vlines_flag) exit(EXIT_SUCCESS);
+*/ 
 
   // Amplitude modulation functions for each detector  
   for(i=0; i<sett.nifo; i++)   
