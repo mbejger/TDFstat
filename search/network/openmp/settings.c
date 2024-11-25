@@ -10,6 +10,7 @@
 #include "settings.h"
 #include <glob.h>
 
+
 /* Search settings: 
  * FFT lenghts & other details, bandwidth and Earth parameters
  */
