@@ -485,6 +485,9 @@ void init_arrays(
 
     ifo[i].sig.xDat = (double *) calloc(sett->N, sizeof(double));
     
+    // Extra array in case of software injections (to keep the original contents) 
+    ifo[i].sig.xDatorig = (double *) calloc(sett->N, sizeof(double));
+    
     // Input time-domain data handling
     // 
     // The file name ifo[i].xdatname is constructed 
@@ -501,6 +504,9 @@ void init_arrays(
       exit(EXIT_FAILURE); 
     }
     
+    // Copy ifo[i].sig.xDat to ifo[i].sig.xDatorig for safekeeping 
+    memcpy(ifo[i].sig.xDatorig, ifo[i].sig.xDat, sett->N*sizeof(double));
+
     int j, Nzeros=0;
     // Checking for null values in the data
     for(j=0; j < sett->N; j++)
@@ -558,8 +564,6 @@ void init_arrays(
     sett->sepsm = ifo[i].sig.sepsm; 
     sett->cepsm = ifo[i].sig.cepsm; 
 
-    //    ifo[i].sig.xDatma = (complex double *) calloc(sett->N, sizeof(complex double));
-    //ifo[i].sig.xDatmb = (complex double *) calloc(sett->N, sizeof(complex double));
     ifo[i].sig.xDatma = fftw_malloc(sett->N*sizeof(complex double));
     ifo[i].sig.xDatmb = fftw_malloc(sett->N*sizeof(complex double));
 
@@ -676,9 +680,8 @@ void add_signal(
   // Writes to: s_range->spndr[0], s_range->nr[0], s_range->mr[0]
   sda_to_grid(sett, s_range, sgnlol); 
  
-
   //#mb start 
-
+  //
   // Grid positions
   al1 = s_range->nr[0]*sett->M[10] + s_range->mr[0]*sett->M[14];
   al2 = s_range->nr[0]*sett->M[11] + s_range->mr[0]*sett->M[15];
@@ -805,8 +808,8 @@ void add_signal(
       // Adding the signal to the data vector 
       if(ifo[n].sig.xDat[i]) { 
 //#mb 
-//        ifo[n].sig.xDat[i] += h0*signadd[n][i];
-        ifo[n].sig.xDat[i] = h0*signadd[n][i];
+        ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
+//        ifo[n].sig.xDat[i] = h0*signadd[n][i];
 
 
       } 
@@ -1179,6 +1182,7 @@ void cleanup(
 
   for(i=0; i<sett->nifo; i++) {
     free(ifo[i].sig.xDat);
+    free(ifo[i].sig.xDatorig); 
     free(ifo[i].sig.xDatma);
     free(ifo[i].sig.xDatmb);
     free(ifo[i].sig.DetSSB);
