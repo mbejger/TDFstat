@@ -119,6 +119,8 @@ int main (int argc, char* argv[]) {
 
         sprintf(opts.si_label, "sig%03d", sid);
 
+        // search settings, adding signal to data 
+        // and corresponding grid range around the injection   
         add_signal(&sett, &opts, &aux_arr, &s_range, line);
 
         int Fnum=0;	// candidate signal number

@@ -39,7 +39,7 @@ void search(
   int pm, mm, nn;       // hemisphere, sky positions 
   int sgnlc=0;          // number of candidates
   FLOAT_TYPE *sgnlv;    // array with candidates data
-  long totsgnl;        // total number of candidates
+  long totsgnl;         // total number of candidates
 
   char outname[1100];
   int fd, status;
@@ -114,13 +114,13 @@ void search(
 	     lck.l_len = 0L;
 	     if (fcntl (fd, F_SETLKW, &lck) < 0) perror ("fcntl()");
 #endif
-	     write(fd, (void *)(sgnlv), sgnlc*NPAR*sizeof(FLOAT_TYPE));
+	     status = write(fd, (void *)(sgnlv), sgnlc*NPAR*sizeof(FLOAT_TYPE));
 	     totsgnl += sgnlc;
 	     if (close(fd) < 0) perror ("close()");
 	     sgnlc=0;
 	     
 	     if(opts->checkp_flag) {
-	       ftruncate(fileno(state), 0);
+	       status = ftruncate(fileno(state), 0);
 	       fprintf(state, "%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
 	       fseek(state, 0, SEEK_SET);
 	       if (save_state == 1) {
@@ -150,7 +150,7 @@ void search(
     lck.l_len = 0L;
     if (fcntl (fd, F_SETLKW, &lck) < 0) perror ("fcntl()");
 #endif
-    write(fd, (void *)(sgnlv), sgnlc*NPAR*sizeof(FLOAT_TYPE));
+    status = write(fd, (void *)(sgnlv), sgnlc*NPAR*sizeof(FLOAT_TYPE));
     totsgnl += sgnlc;
     printf("\n### Total number of signals in %s = %ld\n\n", outname, totsgnl);
     if (close(fd) < 0) perror ("close()");
@@ -161,7 +161,7 @@ void search(
 
   if(opts->checkp_flag) {
     // empty state file to prevent restart after successful end
-    ftruncate(fileno(state), 0);
+    status = ftruncate(fileno(state), 0);
     fclose(state);
   }
   
@@ -181,7 +181,7 @@ void search(
 
   /* Main job */ 
 
-int job_core(int pm,                   // Hemisphere
+int job_core(int pm,             // Hemisphere
 	     int mm,                   // Grid 'sky position'
 	     int nn,                   // Second grid 'sky position'
 	     Search_settings *sett,    // Search settings
@@ -454,7 +454,7 @@ int job_core(int pm,                   // Hemisphere
       // Zero-padding
 #pragma omp parallel for schedule(static)
       for(i = sett->nfftf-1; i > sett->N-1; --i)
-	fxa[i] = fxb[i] = (FLOAT_TYPE)0.;
+        fxa[i] = fxb[i] = (FLOAT_TYPE)0.;
 
       FFTW_PRE(_execute_dft)(plans->plan, fxa, fxa);
       FFTW_PRE(_execute_dft)(plans->plan, fxb, fxb);
@@ -462,9 +462,9 @@ int job_core(int pm,                   // Hemisphere
       // Computing F-statistic
 #pragma omp parallel for schedule(static)
       for (i=sett->nmin; i<=sett->nmax; ++i){
-	F[i] = NORM(fxa[i])/aa + NORM(fxb[i])/bb ;
+	      F[i] = NORM(fxa[i])/aa + NORM(fxb[i])/bb ;
       }
-      
+
       (*FNum)++;
 
 #undef FSTATDEB

@@ -425,7 +425,7 @@ void read_grid( Search_settings *sett,
      
      FILE *data;
      char filename[1024];
-     int i;
+     int i, status;
      
      // In case when -usedet option is used for one detector
      // i.e. opts->usedet has a length of 2 (e.g. H1 or V1),
@@ -449,13 +449,13 @@ void read_grid( Search_settings *sett,
 
      if ((data=fopen (filename, "r")) != NULL) {
 	  printf("Using grid file %s\n", filename);
-	  fread ((void *)&sett->fftpad, sizeof (int), 1, data);
+	  status = fread ((void *)&sett->fftpad, sizeof (int), 1, data);
 
 	  printf("fftpad from the grid file: %d\n", sett->fftpad); 
 	
 	  // M: vector of 16 components consisting of 4 rows
 	  // of 4x4 grid-generating matrix
-	  fread ((void *)sett->M, sizeof (double), 16, data);
+	  status = fread ((void *)sett->M, sizeof (double), 16, data);
 	  fclose (data);
      } else {
 	  perror (filename);
@@ -679,7 +679,8 @@ void add_signal(
   // into the grid coordinates 
   // Writes to: s_range->spndr[0], s_range->nr[0], s_range->mr[0]
   sda_to_grid(sett, s_range, sgnlol); 
- 
+
+  /* 
   //#mb start 
   //
   // Grid positions
@@ -708,6 +709,7 @@ void add_signal(
   sda_to_grid(sett, s_range, sgnlol); 
 
   //#mb end 
+  */ 
 
   // Define the grid ranges in which the signal will be looked for
   // +- grid ranges in each direction are defined by gsize_X
@@ -1432,17 +1434,18 @@ void handle_opts_coinc( Search_settings *sett,
 void manage_grid_matrix( Search_settings *sett, char *gridfile ) {
 
   FILE *data;
+  int status; 
 
   sett->M = (double *)calloc(16, sizeof (double));
 
   if ((data=fopen(gridfile, "r")) != NULL) {
        printf("Reading grid file: %s\n", gridfile);
-       fread ((void *)&sett->fftpad, sizeof (int), 1, data);
+       status = fread ((void *)&sett->fftpad, sizeof (int), 1, data);
        //printf("fftpad from the grid file: %d\n", sett->fftpad); 
-       fread ((void *)sett->M, sizeof(double), 16, data);
+       status = fread ((void *)sett->M, sizeof(double), 16, data);
        // We actually need the second (Fisher) matrix from grid.bin, 
        // hence the second fread: 
-       fread ((void *)sett->M, sizeof(double), 16, data);
+       status = fread ((void *)sett->M, sizeof(double), 16, data);
        fclose (data);
   } else {
        perror(gridfile);
