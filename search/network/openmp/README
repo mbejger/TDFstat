@@ -1,0 +1,10 @@
+# generate 100 random signal parameters 
+for d in {1..100}
+do 
+  ./sigen -amp 1 -band 1234 -overlap 0.1 -nod 6 -reffr 1 | grep "amp" 
+done 1> sig2  
+
+
+
+# run search 
+#./gwsearch-native search_sig100.ini
