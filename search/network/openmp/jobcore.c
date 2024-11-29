@@ -195,6 +195,7 @@ int job_core(int pm,             // Hemisphere
 	     int *FNum) {              // Candidate signal number
 
   int i, j, n;
+  int ii_inj; 
   int smin = s_range->sst, smax = s_range->spndr[1];
   double al1, al2, sinalt, cosalt, sindelt, cosdelt, 
     nSource[3], ft, het0;
@@ -462,7 +463,7 @@ int job_core(int pm,             // Hemisphere
       // Computing F-statistic
 #pragma omp parallel for schedule(static)
       for (i=sett->nmin; i<=sett->nmax; ++i){
-	      F[i] = NORM(fxa[i])/aa + NORM(fxb[i])/bb ;
+		F[i] = NORM(fxa[i])/aa + NORM(fxb[i])/bb ;
       }
 
       (*FNum)++;
@@ -505,6 +506,8 @@ int job_core(int pm,             // Hemisphere
       */
 
       /* stay in (nmin, nmax) range! */
+
+/* #mb
       for(i=sett->nmin+1; i<sett->nmax-dd; i+=dd) {
 	int ii=-1;
 	FLOAT_TYPE Fc = opts->thr;
@@ -516,41 +519,85 @@ int job_core(int pm,             // Hemisphere
 	}
 	
 	if ( ii < 0 ) continue; // no maximum in this block
+*/ 
+
+  //#mb Injection frequency in terms of FFT bins ii 
+  ii_inj = (int)((s_range->freq_inj - sgnl0)*((FLOAT_TYPE)sett->nfftf / (2*M_PI)));  
+
+  FLOAT_TYPE Fcmax = 0; 
+
+  //#mb for(i=sett->nmin; i<sett->nmax; ++i) {
+  for(i=ii_inj-s_range->gsize_f; i<=ii_inj+s_range->gsize_f; ++i) {
+/*  for(i=ii_inj-2*s_range->gsize_f; i<=ii_inj+2*s_range->gsize_f; i+=dd) {
+	int ii=-1;
+	FLOAT_TYPE Fc = opts->thr;
+	for (j=i; j<i+dd; ++j) {
+	  if (F[j] < Fc || F[j-1] > F[j] || F[j] < F[j+1] ) continue;
+	  ii = j;
+	  Fc = F[j];
+	  j++;
+	}
 	
-	// Candidate signal frequency
-	sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
-	  
-	// Checking if signal is within a known instrumental line 
-	int k, veto_status = 0; 
-	for(k=0; k<sett->numlines_band; k++){
-	  if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
-	    veto_status=1;
-	    break;
-	  }
-	}
+	if ( ii < 0 ) continue; // no maximum in this block
+*/
 
-	if(!veto_status) {
-	  
-	  if ( *sgnlc >= sett->bufsize ) {
-	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
-	    exit(EXIT_FAILURE);
-	  }
-	  // SNR ; sqrtf precission is suffiecient
-	  sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
+    if (F[i] < opts->thr) continue;
+    double Fc;
+    int ii;
+    ii = i;
+    Fc = F[i];
 
-	  // Add new parameters to the output buffer array
-	  for (j=0; j<NPAR; ++j)
-	    sgnlv[NPAR*(*sgnlc)+j] = sgnlt[j];
+    if(Fc > Fcmax) 
+      Fcmax = Fc; 
 
-	  (*sgnlc)++;
-	  
+    // Candidate signal frequency
+    sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
+      
+    // Checking if signal is within a known instrumental line 
+    int k, veto_status = 0; 
+    for(k=0; k<sett->numlines_band; k++) {
+      if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
+        veto_status=1;
+        break;
+      }
+    }
+
+    if(!veto_status) {
+      
+      if ( *sgnlc >= sett->bufsize ) {
+        printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
+        exit(EXIT_FAILURE);
+      }
+
+      /*
+      //#mb: output to triggers file in the form of ''grid'' values
+      sgnlt[2] = sgnlt[0];
+      sgnlt[3] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
+      */ 
+      sgnlt[0] = ii - ii_inj;
+      sgnlt[1] = ss - (s_range->spndr[1]);
+
+      // SNR ; sqrtf precission is sufficient
+      // sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
+      //#mb - value of Fc instead of SNR
+      sgnlt[4] = Fc;
+
+      // Add new parameters to the output buffer array
+      for (j=0; j<NPAR; ++j)
+        sgnlv[NPAR*(*sgnlc)+j] = sgnlt[j];
+
+      (*sgnlc)++;
+      
 #ifdef VERBOSE
-	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
-		  *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
+      printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
+        *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
 #endif
-	}
-      } // for i
+    }
 
+  } // for i
+
+//#mb  printf("%f ", Fcmax); 
+	
       
 #if TIMERS>2
       //tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);

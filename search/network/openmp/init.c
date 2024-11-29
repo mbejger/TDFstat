@@ -518,7 +518,8 @@ void init_arrays(
     ifo[i].sig.crf0 = (double)sett->N/(sett->N - ifo[i].sig.Nzeros);
 
     // Estimation of the variance for each detector 
-    ifo[i].sig.sig2 = (ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
+    //#mb for signal-only cases (tests) 
+    ifo[i].sig.sig2 = 1; //(ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
 
     ifo[i].sig.DetSSB = (double *) calloc(3*sett->N, sizeof(double));
     /* 
@@ -680,7 +681,7 @@ void add_signal(
   // Writes to: s_range->spndr[0], s_range->nr[0], s_range->mr[0]
   sda_to_grid(sett, s_range, sgnlol); 
 
-  /* 
+   
   //#mb start 
   //
   // Grid positions
@@ -697,6 +698,9 @@ void add_signal(
   sgnlo[2] = asin(sindelt);
   sgnlo[3] = fmod(atan2(sinalt, cosalt) + 2.*M_PI, 2.*M_PI);
 
+  printf("Grid sky positions: %le %le\n", sgnlo[2], sgnlo[3]); 
+
+  /* 
   // Calculate the hemisphere and be vector 
   s_range->pmr[0] = ast2lin(sgnlo[3], sgnlo[2], C_EPSMA, be);
 
