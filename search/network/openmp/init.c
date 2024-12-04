@@ -519,7 +519,7 @@ void init_arrays(
 
     // Estimation of the variance for each detector 
     //#mb for signal-only cases (tests) 
-    ifo[i].sig.sig2 = 1; //(ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
+    ifo[i].sig.sig2 = (ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
 
     ifo[i].sig.DetSSB = (double *) calloc(3*sett->N, sizeof(double));
     /* 
