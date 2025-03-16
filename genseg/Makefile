@@ -2,7 +2,7 @@ CC = gcc
 
 # we assume that the lalsuite is installed in the conda environment
 # and that it contains static versions of libraries
-LAL_FLAGS = -UUSE_LAL -I$(CONDA_PREFIX)/include
+LAL_FLAGS = -DUSE_LAL -I$(CONDA_PREFIX)/include
 LAL_LIBS = -L$(CONDA_PREFIX)/lib -llalpulsar -llalsupport -llalmetaio -llal
 #LAL_FLAGS =
 #LAL_LIBS =
@@ -15,11 +15,11 @@ FFTW_DIR = /opt/fftw/3.3.10-gcc11-mvapich2-broadwell
 FFTW_FLAGS = -I$(FFTW_DIR)/include
 FFTW_LIBS = -L$(FFTW_DIR)/lib -lfftw3
 
-CFLAGS = -Wall $(LAL_FLAGS) $(FFTW_FLAGS) $(INIPARSER_FLAGS) -O2 -DDEBUG
+CFLAGS = -Wall $(LAL_FLAGS) $(FFTW_FLAGS) $(INIPARSER_FLAGS) -O2 -UDEBUG
 
 LDFLAGS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
 	-Wl,-Bdynamic -lc -lm -lz -lpthread #-static
-LDLIBS1 = -lgslcblas  -lgsl $(FFTW_LIBS) $(INIPARSER_LIBS) #$(LAL_LIBS)
+LDLIBS1 = -lgslcblas  -lgsl $(FFTW_LIBS) $(INIPARSER_LIBS) $(LAL_LIBS)
 LDLIBS2 = $(LAL_LIBS)
 
 all:	genseg laltest

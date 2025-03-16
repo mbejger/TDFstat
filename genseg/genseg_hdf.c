@@ -1,3 +1,4 @@
+//#include <H5Ipublic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,8 +35,13 @@
 /* Requires the LALPulsar library */
 #include <lal/LALBarycenter.h>
 #include <lal/LALInitBarycenter.h>
-#include <lal/LALBarycenter.h>
 #include "EphemerisDetector.h"
+#endif
+
+#ifdef DEBUG
+#define DEBUG_PRINT(x) printf x
+#else
+#define DEBUG_PRINT(x)
 #endif
 
 int fGrubbsOutliersMany (float *, float *, int, int, double, const char *);
@@ -48,29 +54,29 @@ int main (int argc, char *argv[]) {
      int  N, nod, i, yndx, notempty, bufsize = BUFSIZE, use_sci, nout, nseg, overwrite;
      double alpha, dt, othr, w_taper_dt, maxasd;
      struct stat st = {0};
-     dictionary *ini;
+     dictionary *ini; // config file
      const char *plsr, *DataDir, *out_replace, *sci_regions;
 
      double mingps=0., maxgps=0., start, end, startgps;
-     int iseg, sci_len=0, error=0;
+     int iseg, sci_len=0, retval;
      double scaling_factor = 1.e-20;
      float *xtime=NULL, *xall=NULL, *segar=NULL, *seg_sci_mask=NULL, *x0=NULL;
-     int retval=EXIT_SUCCESS;
 
      // HDF related variables
-     hid_t infile_id;
+     hid_t infile_id=H5I_INVALID_HID;
      herr_t hstat;
      int format_version=1, nsamples, last_ichunk=-1;
      float bandwidth;
      double fpo;
-     char dtype[4], detector[3];
+     char dtype[4], site[3];
      const char *H5FileName;
 
 #ifdef USE_LAL
      int gen_eph;
      const char *EphDir, *efile, *sfile;
      char eFname[MAX_LINE], sFname[MAX_LINE], eph_fname[MAX_LINE+32];
-     double *DetSSB, *rDet, *rSSB, mjd1, phir, elam = 0, position[4];
+     double *DetSSB=NULL, *rDet=NULL, *rSSB=NULL;
+     double mjd1, phir, elam = 0, position[4];
      EphemerisData *edat = NULL;
      Detectors detector = 0;
 #endif
@@ -118,16 +124,15 @@ int main (int argc, char *argv[]) {
      printf("[IN] sci_regions = %s\n", sci_regions);
      printf("[IN] w_taper_dt = %f\n", w_taper_dt);
 #ifdef USE_LAL
-     printf("[IN] gen_eph = %s\n", gen_eph);
+     printf("[IN] gen_eph = %d\n", gen_eph);
      printf("[IN] EphDir = %s\n", EphDir);
      printf("[IN] efile = %s\n", efile);
      printf("[IN] sfile = %s\n", sfile);
 #endif
      if (nod <= 0) {
-          error = 1;
           printf("nod <= 0 !\n");
+          goto fail;
      }
-     if (error == 1) exit(EXIT_FAILURE);
 
      FILE *infile=NULL;
 
@@ -168,11 +173,11 @@ int main (int argc, char *argv[]) {
                printf("[H5File] dtype = %s\n", dtype);
           }
 
-          hstat = H5LTget_attribute_string(infile_id, "/", "detector", detector);
+          hstat = H5LTget_attribute_string(infile_id, "/", "site", site);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute detector\n"); goto fail;
+               printf("[H5File] Error reading attribute site\n"); goto fail;
           } else {
-               printf("[H5File] detector = %s\n", detector);
+               printf("[H5File] site = %s\n", site);
           }
 
           hstat = H5LTget_attribute_double(infile_id, "/", "fpo", &fpo);
@@ -206,7 +211,7 @@ int main (int argc, char *argv[]) {
           printf("[H5File] last_ichunk = %d\n", last_ichunk);
 
      } else {
-          perror("[H5File] Error! Cannot open input file \n" );
+          printf("[H5File] Error! Cannot open input file \n" );
           return 1;
      }
 
@@ -215,7 +220,8 @@ int main (int argc, char *argv[]) {
      // 10 * sigma
      othr = 10.*maxasd*sqrt(bandwidth)/scaling_factor;
 
-     printf("Computed parameters:\n");
+     printf("Infered parameters:\n");
+     printf("[IN] site = %s\n", site);
      printf("[IN] dt = %g\n", dt);
      printf("[IN] N = %d (length of the output time series)\n", N);
      printf("[IN] othr = %g (large outlier threshold)\n", othr);
@@ -227,14 +233,6 @@ int main (int argc, char *argv[]) {
 
      float *xchunk;
      xchunk = malloc(nsamples*sizeof(float));
-     /*
-     H5LTread_dataset_float(infile_id, "1", xchunk);
-
-     for(i=0; i<nsamples; ++i){
-          printf("%f  ", xchunk[i]);
-     }
-     printf("\n");
-     */
 
      const gsl_rng_type *T;
      gsl_rng *r = NULL;
@@ -274,7 +272,7 @@ int main (int argc, char *argv[]) {
      	     while(fscanf(sci_file, "%lf %lf", &start, &end) != EOF){
                     int starti = (int)floor((start-mingps)/dt);
                     int endi   = (int)ceil((end-mingps)/dt);
-                    printf("   [SCI] [%d, %d]\n", starti, endi);
+                    DEBUG_PRINT(("   [SCI] [%d, %d]\n", starti, endi));
                     for(i=starti; i<=endi; ++i)
                          segar[i] = 1.;
      	     }
@@ -286,20 +284,20 @@ int main (int argc, char *argv[]) {
 
 #ifdef USE_LAL
      if (gen_eph) {
-          detector = get_detector ((char *)site);
-          get_position (detector, position);
+          detector = get_detector((char *)site);
+          get_position(detector, position);
           elam = position[1];
           printf("[EPH] Ephemeris for detector %s will be created\n",	names[detector]);
-          sprintf (eFname, "%s/%s", EphDir, efile);
-          sprintf (sFname, "%s/%s", EphDir, sfile);
-          if ((edat = XLALInitBarycenter (eFname, sFname)) == NULL) {
+          sprintf(eFname, "%s/%s", EphDir, efile);
+          sprintf(sFname, "%s/%s", EphDir, sfile);
+          if ((edat = XLALInitBarycenter(eFname, sFname)) == NULL) {
                perror (eFname);
                return 1;
           };
      }
-     DetSSB = (double *) calloc (3*N+2, sizeof(double));
-     rDet = (double *) calloc (3*N, sizeof(double));
-     rSSB = (double *) calloc (3*N, sizeof(double));
+     DetSSB = (double *)calloc(3*N+2, sizeof(double));
+     rDet = (double *)calloc(3*N, sizeof(double));
+     rSSB = (double *)calloc(3*N, sizeof(double));
 #endif
 
      printf("[INFO] Time sequences for %s will be created.\n", plsr);
@@ -352,19 +350,19 @@ int main (int argc, char *argv[]) {
                chunk_i0 = (int)round((tchunk_start - tseg_start)/dt);
                chunk_i1 = chunk_i0 + nsamples - 1;
 
-               printf("   [DEB] ichunk=%d  t=%d  [%d, %d] ",
-                    ichunk, gps_sec, chunk_i0, chunk_i1);
+               DEBUG_PRINT(("   [DEB] ichunk=%d  t=%d  [%d, %d] ",
+                    ichunk, gps_sec, chunk_i0, chunk_i1));
 
                if ( chunk_i1 < 0 ) {
                     // skip to the next chunk
-                    printf("   before range - continue\n");
+                    DEBUG_PRINT(("   before range - continue\n"));
                     ++ichunk;
                     continue;
                }
                if ( chunk_i0 >= N ) {
                     // time segment was finished - we should not be here in any case - check edge case!
-                    printf("   after range - ERROR!\n");
-                    exit(EXIT_FAILURE);
+                    DEBUG_PRINT(("   after range - ERROR!\n"));
+                    goto fail;
                }
 
                // read chunk data
@@ -372,7 +370,7 @@ int main (int argc, char *argv[]) {
 
                if ( (chunk_i0 >= 0) && (chunk_i1 <= (N-1)) ) {
                     // chunk is entirely in the range
-                    printf(" in range [%d, %d]/[0, %d]\n", chunk_i0, chunk_i1, N-1);
+                    DEBUG_PRINT((" in range [%d, %d]/[0, %d]\n", chunk_i0, chunk_i1, N-1));
                     for (i=0; i<nsamples; ++i){
                          xtime[chunk_i0+i] = xchunk[i];
                     }
@@ -380,7 +378,7 @@ int main (int argc, char *argv[]) {
                     continue;
                } else if (chunk_i0 < 0) {
                     // chunk overlaps segment on the left side
-                    printf(" left edge [%d, %d]/[0, %d]\n", 0, chunk_i1, N-1);
+                    DEBUG_PRINT((" left edge [%d, %d]/[0, %d]\n", 0, chunk_i1, N-1));
                     for (i=-chunk_i0; i<nsamples; ++i){
                          xtime[chunk_i0+i] = xchunk[i];
                     }
@@ -388,7 +386,7 @@ int main (int argc, char *argv[]) {
                     continue;
                } else {
                     // chunk overlaps segment on the right side
-                    printf(" right edge [%d, %d]/[0, %d]\n", chunk_i0, N-1, N-1);
+                    DEBUG_PRINT((" right edge [%d, %d]/[0, %d]\n", chunk_i0, N-1, N-1));
                     //for (i=0; i<(nsamples-(chunk_i1-N+1)); ++i){
                     for (i=0; i<(N-chunk_i0); ++i){
                          xtime[chunk_i0+i] = xchunk[i];
@@ -550,17 +548,17 @@ int main (int argc, char *argv[]) {
           /**************************/
           /* write output files     */
           /**************************/
-          sprintf (td_dir, "%s/%03d", DataDir, iseg);
+          sprintf(td_dir, "%s/%03d", DataDir, iseg);
           if (stat (td_dir, &st) == -1) {
                mkdir (td_dir, 0755);
           }
-          sprintf (td_dir, "%s/%03d/%s", DataDir, iseg, detector);
+          sprintf(td_dir, "%s/%03d/%s", DataDir, iseg, site);
           if (stat (td_dir, &st) == -1) {
                mkdir (td_dir, 0755);
           }
           // standard filename format
-          sprintf (td_fname, "%s/xdat_%03d_%s.bin", td_dir, iseg, plsr);
-          sprintf (date_fname, "%s/starting_date", td_dir);
+          sprintf(td_fname, "%s/xdat_%03d_%s.bin", td_dir, iseg, plsr);
+          sprintf(date_fname, "%s/starting_date", td_dir);
 
           printf ("[INFO] Writing segment %03d : ", iseg);
           // Do "xall" contains only zeros?
@@ -574,48 +572,78 @@ int main (int argc, char *argv[]) {
 
           if (overwrite) {
                if (((td_stream=fopen (td_fname, "w")) != NULL) && notempty) {
-                    fwrite ((void *)(x0), sizeof(float), N, td_stream);
-                    fclose (td_stream);
-                    printf("done\n");
+                    fwrite((void *)(x0), sizeof(float), N, td_stream);
+                    fclose(td_stream);
+                    printf(" data ");
+               }
+               if ((td_stream = fopen(date_fname, "w")) != NULL) {
+                    fprintf(td_stream, "%.10e\n", tseg_start);
+                    fclose(td_stream);
+                    printf(" | starting_date ");
                }
           } else {
                if ((td_stream=fopen (td_fname, "r")) != NULL) {
-                    fclose (td_stream);
-                    printf("file %s exists, skipping\n", td_fname);
-                    continue;
+                    fclose(td_stream);
+                    printf(" skipping data ");
+                    //continue;
                } else {
                     if (((td_stream=fopen (td_fname, "w")) != NULL) && notempty) {
-                         fwrite ((void *)(x0), sizeof(float), N, td_stream);
-                         fclose (td_stream);
-                         printf("done\n");
+                         fwrite((void *)(x0), sizeof(float), N, td_stream);
+                         fclose(td_stream);
+                         printf(" data ");
+                    }
+               }
+               if ((td_stream = fopen(date_fname, "r")) != NULL) {
+                    fclose(td_stream);
+                    printf(" | skipping starting_date ");
+                    //continue;
+               } else {
+                    if ((td_stream = fopen(date_fname, "w")) != NULL) {
+                         fprintf(td_stream, "%.10e\n", tseg_start);
+                         fclose(td_stream);
+                         printf(" | starting_date ");
                     }
                }
           }
+          printf("\n");
+          /* Generate detector ephemeris */
+#ifdef USE_LAL
+          if (gen_eph) {
+               get_barycenter (tseg_start, detector, edat, DetSSB, rDet, dt, N);
+               for (i=0; i<3*N; i++) rSSB[i] = DetSSB[i] - rDet[i];
+               mjd1 = gps2mjd (tseg_start);
+               phir = sid (mjd1, elam);
+               DetSSB[3*N] = phir;
+               DetSSB[3*N+1] = EPSILON;
 
-          /*
-          // write xdat_*.bin file if not contains only zeros
-          if(notempty){
-               if ((td_stream=fopen (td_fname, "w")) != NULL) {
-                    fwrite ((void *)(x0), sizeof(float), N, td_stream);
+               sprintf (eph_fname, "%s/DetSSB.bin", td_dir);
+               if ((td_stream=fopen (eph_fname, "w")) != NULL) {
+                    fwrite ((void *)DetSSB, sizeof(double), 3*N+2, td_stream);
+                    fclose (td_stream);
+               }
+               sprintf (eph_fname, "%s/rDet.bin", td_dir);
+               if ((td_stream=fopen (eph_fname, "w")) != NULL) {
+                    fwrite ((void *)rDet, sizeof(double), 3*N, td_stream);
+                    fclose (td_stream);
+               }
+               sprintf (eph_fname, "%s/rSSB.bin", td_dir);
+               if ((td_stream=fopen (eph_fname, "w")) != NULL) {
+                    fwrite ((void *)rSSB, sizeof(double), 3*N, td_stream);
                     fclose (td_stream);
                }
           }
-          */
-          if ((td_stream=fopen (date_fname, "w")) != NULL) {
-               fprintf (td_stream, "%.10e\n", tseg_start);
-               fclose (td_stream);
-          }
-
-
+#endif
      } // for iseg
 
+     retval = EXIT_SUCCESS;
      puts("--> SUCCESS");
      goto success;
 fail:
      retval = EXIT_FAILURE;
      puts("--> FAILURE");
+
 success:
-     H5Fclose(infile_id);
+     if (infile_id != H5I_INVALID_HID) H5Fclose(infile_id);
      iniparser_freedict(ini);
      free(xtime);
      free(xall);
