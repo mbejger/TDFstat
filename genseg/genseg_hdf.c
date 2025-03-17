@@ -1,4 +1,3 @@
-//#include <H5Ipublic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,13 +13,19 @@
 #include <hdf5_hl.h>
 #include "../utils/iniparser/src/iniparser.h"
 
-// it has to be consistent with settings.h from search
+// those have to be consistent with settings.h from search
 #define C_OMEGA_R 7.2921151467064e-5
 #define C_SIDDAY (2.*M_PI/C_OMEGA_R)
 #define EPSILON 0.40909280422232891
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
+#ifdef DEBUG
+#define DEBUG_PRINT(x) printf x
+#else
+#define DEBUG_PRINT(x)
+#endif
 
 /* Default configuration file. */
 /* Cann be overridden by the first command-line arg */
@@ -38,20 +43,14 @@
 #include "EphemerisDetector.h"
 #endif
 
-#ifdef DEBUG
-#define DEBUG_PRINT(x) printf x
-#else
-#define DEBUG_PRINT(x)
-#endif
-
 int fGrubbsOutliersMany (float *, float *, int, int, double, const char *);
-
 
 int main (int argc, char *argv[]) {
      FILE *td_stream;
-     char td_fname[MAX_LINE+32], td_dir[MAX_LINE], ini_fname[MAX_LINE],
-          date_fname[MAX_LINE+16];
-     int  N, nod, i, yndx, notempty, bufsize = BUFSIZE, use_sci, nout, nseg, overwrite;
+     char td_fname[MAX_LINE+32], td_dir[MAX_LINE],
+          ini_fname[MAX_LINE], date_fname[MAX_LINE+16];
+     int  N, nod, i, yndx, notempty, bufsize = BUFSIZE,
+          use_sci, nout, nseg, overwrite;
      double alpha, dt, othr, w_taper_dt, maxasd;
      struct stat st = {0};
      dictionary *ini; // config file
@@ -60,9 +59,11 @@ int main (int argc, char *argv[]) {
      double mingps=0., maxgps=0., start, end, startgps;
      int iseg, sci_len=0, retval;
      double scaling_factor = 1.e-20;
-     float *xtime=NULL, *xall=NULL, *segar=NULL, *seg_sci_mask=NULL, *x0=NULL;
+     float *xtime=NULL, *xall=NULL, *segar=NULL,
+          *seg_sci_mask=NULL, *x0=NULL;
 
      // HDF related variables
+     FILE *infile=NULL;
      hid_t infile_id=H5I_INVALID_HID;
      herr_t hstat;
      int format_version=1, nsamples, last_ichunk=-1;
@@ -85,8 +86,8 @@ int main (int argc, char *argv[]) {
      if (argc > 1) strcpy(ini_fname, argv[1]); else strcpy(ini_fname, INI_FNAME);
      printf ("Loading config file %s\n", ini_fname);
      if ((ini = iniparser_load (ini_fname)) == NULL) {
-          perror (ini_fname);
-          return 1;
+          printf("Cannot parse file: %s\n", ini_fname);
+          goto fail;
      }
 
      H5FileName = iniparser_getstring (ini, "genseg:infile", NULL);// input HDF5 file
@@ -134,7 +135,6 @@ int main (int argc, char *argv[]) {
           goto fail;
      }
 
-     FILE *infile=NULL;
 
      // r+ returns NULL if file does not exist OR is directory
      if((infile = fopen(H5FileName,"r+")) != NULL){
@@ -212,7 +212,7 @@ int main (int argc, char *argv[]) {
 
      } else {
           printf("[H5File] Error! Cannot open input file \n" );
-          return 1;
+          goto fail;
      }
 
      dt = 1./(2*bandwidth);
@@ -291,8 +291,8 @@ int main (int argc, char *argv[]) {
           sprintf(eFname, "%s/%s", EphDir, efile);
           sprintf(sFname, "%s/%s", EphDir, sfile);
           if ((edat = XLALInitBarycenter(eFname, sFname)) == NULL) {
-               perror (eFname);
-               return 1;
+               printf("[EPH] Problem in XLALInitBarycenter\n");
+               goto fail;
           };
      }
      DetSSB = (double *)calloc(3*N+2, sizeof(double));
