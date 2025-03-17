@@ -15,7 +15,7 @@ FFTW_DIR = /opt/fftw/3.3.10-gcc11-mvapich2-broadwell
 FFTW_FLAGS = -I$(FFTW_DIR)/include
 FFTW_LIBS = -L$(FFTW_DIR)/lib -lfftw3
 
-CFLAGS = -Wall $(LAL_FLAGS) $(FFTW_FLAGS) $(INIPARSER_FLAGS) -O2 -DDEBUG
+CFLAGS = -Wall $(LAL_FLAGS) $(FFTW_FLAGS) $(INIPARSER_FLAGS) -O2 -UDEBUG
 
 LDFLAGS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
 	-Wl,-Bdynamic -lc -lm -lz -lpthread #-static

@@ -338,9 +338,10 @@ int main (int argc, char *argv[]) {
                     continue;
                }
                if ( chunk_i0 >= N ) {
-                    // time segment was finished - we should not be here in any case - check edge case!
-                    DEBUG_PRINT(("   after range - ERROR!\n"));
-                    goto fail;
+                    printf("[INFO] gap in data detected !\n");
+                    //DEBUG_PRINT(("   gap in data detected !\n"));
+                    //goto fail;
+                    break;
                }
 
                // read chunk data
@@ -549,7 +550,8 @@ int main (int argc, char *argv[]) {
           }
 
           if (overwrite) {
-               if (((td_stream=fopen (td_fname, "w")) != NULL) && notempty) {
+               // order is important, don't create empty file
+               if ( notempty && ((td_stream=fopen (td_fname, "w")) != NULL) ) {
                     fwrite((void *)(x0), sizeof(float), N, td_stream);
                     fclose(td_stream);
                     printf(" data ");
@@ -565,7 +567,7 @@ int main (int argc, char *argv[]) {
                     printf(" skipping data ");
                     //continue;
                } else {
-                    if (((td_stream=fopen (td_fname, "w")) != NULL) && notempty) {
+                    if ( notempty && ((td_stream=fopen (td_fname, "w")) != NULL)) {
                          fwrite((void *)(x0), sizeof(float), N, td_stream);
                          fclose(td_stream);
                          printf(" data ");
