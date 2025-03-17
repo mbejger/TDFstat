@@ -4,6 +4,7 @@
 #include <lal/LALBarycenter.h>
 #include <lal/LALInitBarycenter.h>
 #include "EphemerisDetector.h"
+#include "genseg.h"
 
 int get_barycenter (double gps1, Detectors site, EphemerisData *edat,
                     double *DetSSB, double *rDet, double dt, int len) {

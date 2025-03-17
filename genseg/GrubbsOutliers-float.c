@@ -10,6 +10,7 @@
 #ifdef DEBUG
 #include <stdio.h>
 #endif
+#include "genseg.h"
 
 double fzcritical (double alpha, int n) {
      /* Computes the critical z value for rejecting outliers (GRUBBS TEST) */
@@ -105,7 +106,7 @@ int fZeroOutliersOne (float *buf, int len, double alpha) {
 
 
 int fGrubbsOutliersMany (float *inp, float *out, int len, int bufsize,
-     double alpha, char *out_replace) {
+     double alpha, const char *out_replace) {
      /*
        Split the input into sequences of the length bufsize, omitting
        zeros. Run ZeroOutliersOne on any of short sequences and
@@ -134,19 +135,14 @@ int fGrubbsOutliersMany (float *inp, float *out, int len, int bufsize,
                if ((*(buffer+ncopied) = *xpos++) != 0.)
                     *(nonzero+ncopied++) = xpos-inp-1;
           }
-#ifdef DEBUG
-          fprintf (stderr, "%d samples in buffer, ", ncopied);
-#endif
+          DEBUG_PRINT(("%d samples in buffer, ", ncopied));
           if (! strcmp(out_replace, "gauss"))
                nout = fGaussOutliersOne (buffer, ncopied, alpha, r);
           else
                nout = fZeroOutliersOne (buffer, ncopied, alpha);
 
           nremoved += nout;
-#ifdef DEBUG
-          fprintf (stderr, "%d outlier(s) cleaned, %4.1f%% done\n",
-               nout, 100.0*(xpos-inp)/(double)len);
-#endif
+          DEBUG_PRINT(("%d outlier(s) cleaned, %4.1f%% done\n", nout, 100.0*(xpos-inp)/(double)len));
           for (i=0; i<ncopied; i++)
                *(out+nonzero[i]) = buffer[i];
      }

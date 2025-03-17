@@ -12,28 +12,7 @@
 #include <hdf5.h>
 #include <hdf5_hl.h>
 #include "../utils/iniparser/src/iniparser.h"
-
-// those have to be consistent with settings.h from search
-#define C_OMEGA_R 7.2921151467064e-5
-#define C_SIDDAY (2.*M_PI/C_OMEGA_R)
-#define EPSILON 0.40909280422232891
-
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-#ifdef DEBUG
-#define DEBUG_PRINT(x) printf x
-#else
-#define DEBUG_PRINT(x)
-#endif
-
-/* Default configuration file. */
-/* Cann be overridden by the first command-line arg */
-#define INI_FNAME "genseg.ini"
-
-/* Buffer size for the outlier removal algorithm */
-#define BUFSIZE 1<<15
-#define MAX_LINE 8192
+#include "genseg.h"
 
 #ifdef USE_LAL
 /* Compile the ephemeris generation code */
@@ -43,7 +22,6 @@
 #include "EphemerisDetector.h"
 #endif
 
-int fGrubbsOutliersMany (float *, float *, int, int, double, const char *);
 
 int main (int argc, char *argv[]) {
      FILE *td_stream;
@@ -143,9 +121,9 @@ int main (int argc, char *argv[]) {
           if (infile_id < 0) goto fail;
           // just some sanity checks
           hstat = H5LTget_attribute_int(infile_id, "/", "last_ichunk", &last_ichunk);
-          if (hstat < 0) {printf("[H5File] Error reading attribute last_ichunk\n"); goto fail;}
-          if (last_ichunk < 0) {printf("[H5File] Error: last_ichunk < 0 \n"); goto fail;}
-          printf("[H5File] Opened %s [read only mode][format_version = %d]\n", H5FileName, format_version);
+          if (hstat < 0) {printf("[HDF] Error reading attribute last_ichunk\n"); goto fail;}
+          if (last_ichunk < 0) {printf("[HDF] Error: last_ichunk < 0 \n"); goto fail;}
+          printf("[HDF] Opened %s \n      [read only mode][format_version = %d]\n", H5FileName, format_version);
           // getting creation plist for file doesn't work, use root group
           hid_t rgroup = H5Gopen(infile_id, "/", H5P_DEFAULT);
           hid_t info = H5Gget_create_plist(rgroup);
@@ -153,65 +131,65 @@ int main (int argc, char *argv[]) {
           H5Pget_link_creation_order(info, &flags);
           H5Pclose(info);
           if ( flags & (H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED) ) {
-               puts("[H5File] Link creation order is tracked and indexed - good!");
+               puts("[HDF] Link creation order is tracked and indexed - good!");
           } else {
-               printf("[H5File] Wrong link creation order flags=%u / %u!\n", flags, H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED);
+               printf("[HDF] Wrong link creation order flags=%u / %u!\n", flags, H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED);
                goto fail;
           }
 
           hstat = H5LTget_attribute_int(infile_id, "/", "format_version", &format_version);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute format_version\n"); goto fail;
+               printf("[HDF] Error reading attribute format_version\n"); goto fail;
           } else {
-               printf("[H5File] format_version = %d\n", format_version);
+               printf("[HDF] format_version = %d\n", format_version);
           }
 
           hstat = H5LTget_attribute_string(infile_id, "/", "dtype", dtype);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute dtype\n"); goto fail;
+               printf("[HDF] Error reading attribute dtype\n"); goto fail;
           } else {
-               printf("[H5File] dtype = %s\n", dtype);
+               printf("[HDF] dtype = %s\n", dtype);
           }
 
           hstat = H5LTget_attribute_string(infile_id, "/", "site", site);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute site\n"); goto fail;
+               printf("[HDF] Error reading attribute site\n"); goto fail;
           } else {
-               printf("[H5File] site = %s\n", site);
+               printf("[HDF] site = %s\n", site);
           }
 
           hstat = H5LTget_attribute_double(infile_id, "/", "fpo", &fpo);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute fpo\n"); goto fail;
+               printf("[HDF] Error reading attribute fpo\n"); goto fail;
           } else {
-               printf("[H5File] fpo = %g\n", fpo);
+               printf("[HDF] fpo = %g\n", fpo);
           }
 
           hstat = H5LTget_attribute_float(infile_id, "/", "bandwidth", &bandwidth);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute bandwidth\n"); goto fail;
+               printf("[HDF] Error reading attribute bandwidth\n"); goto fail;
           } else {
-               printf("[H5File] bandwidth = %g\n", bandwidth);
+               printf("[HDF] bandwidth = %g\n", bandwidth);
           }
 
           hstat = H5LTget_attribute_int(infile_id, "/", "nsamples", &nsamples);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute nsamples\n"); goto fail;
+               printf("[HDF] Error reading attribute nsamples\n"); goto fail;
           } else {
-               printf("[H5File] nsamples = %d\n", nsamples);
+               printf("[HDF] nsamples = %d\n", nsamples);
           }
 
           hstat = H5LTget_attribute_double(infile_id, "/", "scaling_factor", &scaling_factor);
           if (hstat < 0) {
-               printf("[H5File] Error reading attribute scaling_factor\n"); goto fail;
+               printf("[HDF] Error reading attribute scaling_factor\n"); goto fail;
           } else {
-               printf("[H5File] scaling_factor = %g\n", scaling_factor);
+               printf("[HDF] scaling_factor = %g\n", scaling_factor);
           }
 
-          printf("[H5File] last_ichunk = %d\n", last_ichunk);
+          printf("[HDF] last_ichunk = %d\n", last_ichunk);
 
      } else {
-          printf("[H5File] Error! Cannot open input file \n" );
+          printf("[HDF] Error! Cannot open input file \n" );
           goto fail;
      }
 
@@ -434,7 +412,7 @@ int main (int argc, char *argv[]) {
 #if 1
                // exclude large outliers groups at edges of sci regions
                int is;
-               printf("[DEB] Exclude large outliers at sci edges: [%d, %d]  ", i1, i2);
+               DEBUG_PRINT(("[DEB] Exclude large outliers at sci edges: [%d, %d]  ", i1, i2));
                for (is=i1; is <= i2; is++){
                     if ( fabs(xall[is]) < othr &&
                          fabs(xall[is+1]) < othr ) {
@@ -451,7 +429,7 @@ int main (int argc, char *argv[]) {
                     seg_sci_mask[is] = 0.;
                }
                i2 = is;
-               printf(" => [%d, %d]\n", i1, i2);
+               DEBUG_PRINT((" => [%d, %d]\n", i1, i2));
 #endif
 
                // Apply Tukey window  to the scientific region
@@ -463,7 +441,7 @@ int main (int argc, char *argv[]) {
                     int li;
                     // in case lobe_isize*2 < L ; +2 accounts for even and odd cases
                     li = MIN(lobe_isize, (i2-i1+2)/2 );
-                    printf("[DEB] Tukey window applied to [%d, %d]  iobe_isize=%d\n", i1, i2, li);
+                    DEBUG_PRINT(("[DEB] Tukey window applied to [%d, %d]  iobe_isize=%d\n", i1, i2, li));
                     for(l=0; l<li; l++){
                          double lobe = 0.5*(1.-cos(PI*l/li));
                          seg_sci_mask[i1 + l] = lobe;
@@ -480,7 +458,7 @@ int main (int argc, char *argv[]) {
 
 #if 1
           // remove ramaining large outliers above 6*sigma level (othr not used)
-          printf("[DEB] --- Cleaning large outliers - replace with %s \n", out_replace);
+          printf("[INFO] Cleaning large outliers - replace with %s \n", out_replace);
 
           double sdval;
           nout = 0;
@@ -494,7 +472,7 @@ int main (int argc, char *argv[]) {
                }
           }
           sdval = sqrt(sdval/(double)(nout-1));
-          printf("[DEB]    stdval = %f ,  noutzero = %d\n", sdval, nout);
+          printf("[INFO] ---- stdval = %f ,  noutzero = %d\n", sdval, nout);
 
           nout = 0;
           if (! strcmp(out_replace, "gauss")) {
@@ -512,20 +490,20 @@ int main (int argc, char *argv[]) {
                          nout++;
                     }
           }
-          printf("[DEB]    Large outliers removed : %d / %d = %d%% \n", nout, N, 100*nout/N);
+          printf("[INFO] ---- Large outliers removed : %d / %d = %d%% \n", nout, N, 100*nout/N);
 #endif
           // remove remaining outliers using Grubbs test
           x0 = (float *)malloc(N*sizeof (float)); // init to 0 in fGrubbsOutliersMany
 #if 1
           nout = fGrubbsOutliersMany(xall, x0, N, bufsize, alpha, out_replace);
-          printf("[DEB]    Grubbs outliers removed : %d / %d = %6.2f%% \n", nout, N, 100.*(float)nout/N);
+          printf("[INFO] Grubbs outliers removed : %d / %d = %6.2f%% \n", nout, N, 100.*(float)nout/N);
 #else
           memcpy(x0, xall, N*sizeof(float));
 #endif
 
 // replace all zeros with gaussian values
 #if 0
-          printf("[DEB] --- Replacing zeros with gaussian values");
+          printf("[INFO] Replacing zeros with gaussian values");
 
           double sd = 0.;
           nout = 0;
@@ -537,7 +515,7 @@ int main (int argc, char *argv[]) {
                }
           }
           sd = sqrt(sd/(double)(nout-1));
-          printf("[DEB] | std dev = %f \n", sd);
+          printf("[INFO] | std dev = %f \n", sd);
 
           for (i=0; i<N; i++){
                if (fabs(x0[i]) < 1.e-30)
