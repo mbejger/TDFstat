@@ -1,0 +1,54 @@
+[genseg]
+
+# full path to the HDF5 file containing STS data
+infile = sfft_0072_H1.h5
+
+# GPS starting time for time seqments
+startgps = 1238163456
+
+# length of a single time segment in days (integer)
+nod = 6
+
+# how many time segments to generate
+nseg = 2
+
+# Pulsar name / band number
+plsr = 0072
+
+# Output data directory
+DataDir = O3_C01_data
+
+# allow to overwrite existing data and starting_date (useful for incremental analysis)
+overwrite = yes
+
+#--------------------- outliers ------------------------
+# Significance level for dermination of outliers
+alpha = 0.1
+
+# max. ASD, othr = 10*maxasd*sqrt(B)*einstein_factor
+maxasd = 1.e-21
+
+# Replace outliers (both large and Grubbs) with zero or random gaussian value
+out_replace = gauss
+
+#------------------- analysis ready segments -------------
+# Do remove non scientific data?
+use_sci = yes
+
+# list of scientific regions in gps time
+sci_regions = O3_C00_H1_gps_sci_seg.txt
+
+# Tukey window tapering size in seconds; if <=0 do not apply window to science regions
+w_taper_dt = 600.
+
+
+#------------------- Ephemeris ----------------------------
+# Whether to generate detector ephemeris
+gen_eph = yes
+
+# Path to ephemeris files (distributed with lalpulsar)
+EphDir = ./
+
+# Ephemeris files for Earth and Sun (distributed in lalsuite)
+efile = earth00-40-DE405.dat
+sfile = sun00-40-DE405.dat
