@@ -1035,9 +1035,9 @@ void plan_fftw(
   printf("double plans...");
   // Change FFTW_MEASURE to FFTW_PATIENT for more optimized plan
   plans->pl_int = fftw_plan_dft_1d(sett->nfft, fftw_arr->xa, fftw_arr->xa,
-				   FFTW_FORWARD, FFTW_ESTIMATE);
+				   FFTW_FORWARD, FFTW_MEASURE);
   plans->pl_inv = fftw_plan_dft_1d(sett->Ninterp, fftw_arr->xa, fftw_arr->xa,
-				   FFTW_BACKWARD, FFTW_ESTIMATE);
+				   FFTW_BACKWARD, FFTW_MEASURE);
   printf("done\n");
 
   printf("float plans...");
@@ -1045,7 +1045,7 @@ void plan_fftw(
   fftw_arr->fxb = (FFTW_PRE(_complex) *)FFTW_PRE(_malloc)(sett->nfftf*sizeof(FFTW_PRE(_complex)));
 
   plans->plan = FFTW_PRE(_plan_dft_1d)(sett->nfftf, fftw_arr->fxa, fftw_arr->fxa,
-				       FFTW_FORWARD, FFTW_ESTIMATE);
+				       FFTW_FORWARD, FFTW_MEASURE);
   printf("done\n");
 
   // Generates a wisdom FFT file if there is none

@@ -7,12 +7,13 @@
 #include <getopt.h>
 
 #include "auxi.h"
-#include "settings.h"
 #include "struct.h"
+#include "settings.h"
 
 static int help_flag=0;
 
 double get_rand() ;
+Detector_settings ifo[MAX_DETECTORS];
 
 int main(int argc, char *argv[]) {
   

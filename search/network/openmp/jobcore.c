@@ -495,7 +495,7 @@ int job_core(int pm,                   // Hemisphere
       }
 
       /* select triggers */
-
+#if 1
       int dd = sett->dd;
       /* find the highest maximum (above trl) in each block of length dd;
 	 dd is set to (1/day frequency in units of F indices)-1,
@@ -514,7 +514,20 @@ int job_core(int pm,                   // Hemisphere
 	}
 	
 	if ( ii < 0 ) continue; // no maximum in this block
-	
+#else
+	for(i=sett->nmin; i<sett->nmax; ++i) {
+	    if (F[i] < opts->thr) continue;
+	    FLOAT_TYPE Fc;
+	    int ii = i;
+	    Fc = F[i];
+	    while (++i < sett->nmax && F[i] > opts->thr) {
+		if(F[i] > Fc) {
+		    ii = i;
+		    Fc = F[i];
+		} // if F[i] 
+	    } // while i
+	    
+#endif	
 	// Candidate signal frequency
 	sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
 	  

@@ -55,8 +55,10 @@ void search_settings(Search_settings* sett) {
   }
 
   // dimensionless spindown range
-  Smax = 2.*M_PI*fdotmin*dt*dt;
-  Smin = 2.*M_PI*fdotmax*dt*dt;
+  //Smax = 2.*M_PI*fdotmin*dt*dt;
+  //Smin = 2.*M_PI*fdotmax*dt*dt;
+  Smax = M_PI*fdotmin*dt*dt;
+  Smin = M_PI*fdotmax*dt*dt;
 
   nd = 2;     // Degree of freedom, 
               // (2*nd = deg. no ofrees of freedom for chi^2)
