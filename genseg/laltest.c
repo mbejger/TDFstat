@@ -7,8 +7,8 @@
 #include <lal/LALInitBarycenter.h>
 #include <lal/LALBarycenter.h>
 
-#define efile "earth00-19-DE405.dat"
-#define sfile "sun00-19-DE405.dat"
+#define efile "earth00-40-DE405.dat"
+#define sfile "sun00-40-DE405.dat"
 #define N 258492 //47127
 #define EPSILON 0.40909280422232891
 
@@ -19,10 +19,11 @@ int get_barycenter (double, Detectors, EphemerisData *,	\
 
 
 int main (int argc, char *argv[]) {
-  double gps1 = 1.1260846080e+09;  /* 010 O1 */
+  //double gps1 = 1.1260846080e+09;  /* 010 O1 */
+  double gps1 = 1238163456;
   double dt = 2.0;
   //double bandwidth;
-  char name[] = "L1";
+  char name[] = "H1";
   double position[4], mjd1, phir, elam;
   Detectors detector;
   EphemerisData *edat;
@@ -33,7 +34,7 @@ int main (int argc, char *argv[]) {
   DetSSB = (double *) calloc (3*N+2, sizeof(double));
   rDet = (double *) calloc (3*N, sizeof(double));
   rSSB = (double *) calloc (3*N, sizeof(double));
-  
+
   detector = get_detector(name);
   fprintf (stderr, "Generating ephemeris for %s detector\n",
 	   names[detector]);
@@ -46,7 +47,7 @@ int main (int argc, char *argv[]) {
   fprintf (stderr, "mjd = %f\nphir = %f\n", mjd1, phir);
   edat = XLALInitBarycenter (efile, sfile);
   //bandwidth = 1/(2*dt);
-  get_barycenter (gps1, L1, edat, DetSSB, rDet, dt, N); //here also change detector name
+  get_barycenter (gps1, H1, edat, DetSSB, rDet, dt, N); //here also change detector name
   DetSSB[3*N] = phir;
   DetSSB[3*N+1] = EPSILON;
   for (j=0; j<3*N; j++)
