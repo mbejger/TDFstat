@@ -4,15 +4,52 @@ title: Input data generation
 
 # Input data generation
 
-The input time series data for the TDFstat pipeline are generated in two steps:
+## General workflow
 
-* `extract_band` program extracts narrow band Short Fourier Transforms from the SFDB, does reverse FFT and writes Short Time Series into a HDF5 file
-* `genseg` program combines STS into desired length time series, applies Analysis Ready flag and cleans the data (outliers removal)
+The input data for TDFstat pipeline are generated from SFDB files created by the Rome Group using [PSS library](https://git.ligo.org/pia.astone/create_sfdb) (LVK login required). Those files contain wide-band (e.g. 2048 Hz) Short-time Fourier Transforms. Two codes are used to create long, time domain series suitable for TDFstat pipeline:
 
-## `extract_band`
+* `extract_band_hdf_td` - extracts narrow band Short-Time Fourier Transforms from the SFDB, performs inverse FFT and writes Short Time Series (STS) into a HDF5 file. This code is based on the original `extract_band` code from PSS which only extracts narrow band SFTs and writes them to text files.
+* `genseg` - combines STSes into longer time segments, applies regions mask (e.g. regions with Analysis Ready flag) and cleans the data (outliers removal). In addition the code generates ephemeris files for coresponding time segments.
+
+The general scheme of data generation is illustrated in the picture.
+
+[![General scheme](./img/tdfstat_data_gen-v2.png){width=50%}](./img/tdfstat_data_gen-v2.png)
+
+### Band and segment numbering
+
+For practical reasons we assingn integer numbers to our frequency bands according to this general formula:
+
+$$fpo = 10 + (1 - 2^{-ov})\cdot band\cdot B \quad \mathrm{[Hz]}.$$
+
+where:
+
+* $fpo$ is starting/reference frequency of the band
+* $band$ is integer band number
+* $B$ is bandwidth
+* $2^{-ov}$ is band overlap (this form assures alignement of bands with Fourier bins in the SFDB).
+
+In the names of files and directories the $band$ is formatted using `%04d` specifier, e.g. `0072`.
+
+Time segments (or simply segments) have length of integer multiple of 1 day and are assigned subsequent integer numbers starting from 1. In the names of files and directories the segment number is formatted using `%03d` specifier, e.g. `001`.
+
+
+### Example
+
+Typical All-sky search data generation workflow with numbers:
+
+1. We use SFDB files with 2048 Hz bandwidth which contain STFT of length 1024 s overlapped in time by half (512 s).
+2. `extract_band` was used to extract narrow bands with $B=0.25 Hz$. For this $B$ we have sampling interval $dt = 1/(2 B) = 2 s$. Since STFT length is 1024 s we have 512 samples/STFT but we use only middle half of the inverse FFT which results in 256 samples per time chunk.
+3. `genseg` was used to assemble time segments of length nod=6 days. The whole run was about 1 yr long so we've got 60 segments. Number of samples in the single segment is given by formula:
+
+$$N = round(nod*C\_SIDDAY/dt)$$
+
+where $C\_SIDDAY$ is the duration of sidereal day in seconds.
+
+----
+## extract_band
 
 This program converts Short Fourier Transformation series to time series.
-Written by Pia Astone (INFN, Physics Department of University of Rome "La Sapienza").
+Written by Pia Astone (INFN, Physics Department of University of Rome "La Sapienza") a part of the PSS package used to create SFDB.
 
 ### Prerequisites
 
@@ -41,7 +78,36 @@ J0034+1612_2010-10-10.list
 ```
 
 ### Output
+```
+HDF5 object                  | data type
+----------------------------------------------------
+/root
+├── attr: format_version     | int
+├── attr: site               | str[3]
+├── attr: fpo                | double
+├── attr: bandwidth          | float
+├── attr: df                 | double
+├── attr: dtype              | str[4]
+├── attr: sft_overlap        | int
+├── attr: nsamples           | int
+├── attr: scaling_factor     | double
+├── attr: subsampling_factor | double
+├── attr: last_ichunk        | int
+├── dataset "ichunk"
+│   ├── data                 | float data[nsamples]
+│   ├── attr: ichunk         | int
+│   ├── attr: gps_sec        | int
+│   ├── attr: gps_nsec       | int
+│   ├── attr: sft_mjdtime    | double
+│   ├── attr: sfdb_file      | str[]
+│   ├── attr: ctime          | str[]
+│   └── attr: nfft           | int
+└── dataset "ichunk+1"
+    ├── data
+    └── ...
+```
 
+### old version
 ```
 % Beginning freq- Band- Samples in one stretch- Subsampling factor- inter (overlapping, 2 if data were overlapped)- Frequency step- Scaling factor- ***The data are real and imag of the FFT
 % 908.152344 0.250000 256 8192.000000 2  0.0009766 1.000000e-20
@@ -55,12 +121,12 @@ J0034+1612_2010-10-10.list
 -3.87826732e+02 -1.55758978e+02
 ```
 
-
+----
 ## `genseg`
 
 *TODO* For the implementation see [here](https://github.com/mbejger/polgraw-allsky/tree/master/gen2day).
 
-### Input data structure
+## Input data structure
 
 The time series input data is divided into time segments of typically a few days length and consists - for each detector - of the input time series data, the ephemerides and the grid-generating matrix file (defining the parameter space of the search).
 
@@ -73,7 +139,7 @@ A single run requires 2 data files for each detector `DD`, stored in `data_dir/n
 
 Third file is the sky positions-frequency-spindown grid file in linear coordinates (common for all the detectors), stored in `data_dir/nnn` in case of the network search (one grid file is used by all the detectors) or in each detector directory separately (in case of single-detector searches):
 
-   * `grid.bin` - generator matrix of an optimal grid of templates (defining the parameter space; see [here](../polgraw-allsky/grid_generation) for details).
+   * `grid.bin` - generator matrix of an optimal grid of templates (defining the parameter space; see [here](./grid_generation) for details).
 
 An example for two LIGO detectors H1 and L1, and data frame segments $nnn=001-008$ with pure Gaussian noise 2-day time segments with sampling time equal to 2s for a fiducial narrow band number $bbbb=1234$ (`xdatc_nnn_1234.bin`) coresponding the the band frequency $fpo=308.859375$ is [available here](https://polgraw.camk.edu.pl/H1L1_2d_0.25.tar.gz).
 
@@ -103,7 +169,7 @@ Frames `nnn` are labelled with three-digit consecutive number. For the `O1` data
 
 $$fpo = 10 + (1 - 2^{-5})\cdot bbbb\cdot \frac{1}{2dt}\ \mathrm{[Hz]}.$$
 
-Neighboring bands overlap by $2^{-5}/(2dt)\ \mathrm{Hz}$. `O1` data in the frequency range $10-2000\ \mathrm{Hz}$ contains $8220$ narrow `0.25 Hz` bands. With the $dt = 2s$ sampling time, the total number of data points in time segments of 2 sideral day long is `N=86164`. For lower frequencies (`10-475 Hz`, see [documents and publications](../polgraw-allsky/articles)) 6 day length segments are used (`N=258492` double-precision numbers).
+Neighboring bands overlap by $2^{-5}/(2dt)\ \mathrm{Hz}$. `O1` data in the frequency range $10-2000\ \mathrm{Hz}$ contains $8220$ narrow `0.25 Hz` bands. With the $dt = 2s$ sampling time, the total number of data points in time segments of 2 sideral day long is `N=86164`. For lower frequencies (`10-475 Hz`, see [documents and publications](./articles)) 6 day length segments are used (`N=258492` double-precision numbers).
 
 
 
