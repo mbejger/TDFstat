@@ -153,7 +153,7 @@ The internal file structure:
 ```
 HDF5 object                  | data type
 ----------------------------------------------------
-/root
+/                            | root group
 ├── attr: format_version     | int
 ├── attr: site               | str[3]
 ├── attr: fpo                | double
@@ -165,7 +165,7 @@ HDF5 object                  | data type
 ├── attr: scaling_factor     | double
 ├── attr: subsampling_factor | double
 ├── attr: last_ichunk        | int
-├── dataset "ichunk"
+├── dataset "ichunk"         | dataset
 │   ├── data                 | float data[nsamples]
 │   ├── attr: ichunk         | int
 │   ├── attr: gps_sec        | int
@@ -234,14 +234,14 @@ This code combines STS (short time series) chunks stored in a HDF5 file
 
 ### Compilation:
 
-[Source code](https://github.com/Polgraw/TDFstat/tree/main/genseg)
-
+[Source code](https://github.com/Polgraw/TDFstat/tree/main/genseg)  
 Prerequisities: C compiler, HDF5 library, lalsuite (if -DUSE_LAL is used in
 Makefile, this is required to generate ephemeris)
 
 lalsuite can be installed from conda-forge repository using [miniforge installer](https://conda-forge.org/download/):
 ```
 mamba create -n lal lalsuite
+mamba activate lal
 ```
 To compile type `make genseg-hdf`.  
 The old genseg version (used before O4) is preserved in subdirectory `old`.
@@ -283,12 +283,12 @@ cp $CONDA_PREFIX/share/lalpulsar/earth00-40-DE405.dat.gz .
 gunzip sun00-40-DE405.dat.gz earth00-40-DE405.dat.gz
 ```
 
-To run genseg type `./genseg-hdf <config file>`.
+To run genseg type `./genseg-hdf <config file>`. 
 
 
 ## TDFstat input data structure
 
-The TDFstat pipeline (actually the mein `search` code) assumes input data to
+The TDFstat pipeline (actually the mein `search` code) assumes that input data
 have fixed directory and fileneme structure.
 The input data are divided into time segments of typically a few days length and consists - for each detector - of the input time series data, the ephemerides and the grid-generating matrix file (defining the parameter space of the search).
 
@@ -340,12 +340,11 @@ An example for two LIGO detectors H1 and L1, and data frame segments $nnn=001-00
 
 ## Gaussian data generator
 
-`genseg` directory contains additional code `xdat-gauss-gaps.c` to generate time series drawn from the Gaussian distribution.
+`genseg` directory contains additional code `gauss-xdat-mask.c` to generate time series drawn from the Gaussian distribution.
 
 ### Compilation
 
 Prerequisites: C compiler , GSL library
-
 ```
 % gcc gauss--xdat-mask.c -o gauss-xdat-mask -lm -lgsl -lgslcblas
 ```
@@ -354,16 +353,16 @@ Prerequisites: C compiler , GSL library
 
 The program takes input values from the command line:
 ```
-% ./gauss-xdat-mask N amplitude sigma output-file [gaps-template]
+% ./gauss-xdat-mask N amplitude sigma output-file [xdat-template]
 ```
 where N is the length of the time series (in samples), amplitude and sigma are
 Gauss function parameters, output-file is the name of the output file and
-gaps-template is an optional parameter: name of the other xdat file from which
+xdat-template is an optional parameter: name of the existing xdat file from which
 only gaps (zeros) will be copied to the output (e.g. the real xdat file -
 usefull for testing).
 
-Example runL
+Example:
 ```
 % ./gauss-xdat-mask 86164 1 1 xdat_001_1234.bin
 ```
-The output is a binary file containing `N` float-precision numbers.
+The output is a binary file, `xdat_001_1234.bin` containing  86164 float-precision numbers.
