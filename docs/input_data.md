@@ -223,13 +223,13 @@ Output to a text file:
 ----
 ## genseg code
 
-This code assembles STS (short time series) chunks stored in a HDF5 file
+This code combines STS (short time series) chunks stored in a HDF5 file
 (produced by `extract_band`) into time segments of any length. In addition:
 
 * it applies science (analysis ready) mask (Tukey window is used to smooth edges
   of each continuous region)
 * removes outliers
-* writes ephemeris for the detectorr (requires lalsuite)
+* writes ephemeris files (DetSSB.bin) for the detector (requires lalsuite)
 
 
 ### Compilation:
@@ -248,7 +248,7 @@ The old genseg version (used before O4) is preserved in subdirectory `old`.
 
 ### Running:
 
-`genseg-hdf` requires a configuration file in INI format. Example file is
+`genseg-hdf` requires a configuration file in the INI format. An example file is
 provided in the source directory
 [H1_0072_6d.g2d](https://github.com/Polgraw/TDFstat/blob/main/genseg/H1_0072_6d.g2d).
 All configuration options are explained in the comments in this file.
@@ -310,19 +310,20 @@ Third file is the sky positions-frequency-spindown grid file in linear coordinat
 
 A typical directory structure is as follows:
 
-```bash
-001
-├── grid.bin
-├── H1
-│   ├── DetSSB.bin
-│   ├── grid.bin
-│   ├── starting_date
-│   └── xdatc_001_1234.bin
-└── L1
-    ├── DetSSB.bin
-    ├── grid.bin
-    ├── starting_date
-    └── xdatc_001_1234.bin
+```
+xdat_O3_C01/
+├── 001/
+	├── grid.bin
+	├── H1/
+	│   ├── DetSSB.bin
+	│   ├── grid.bin
+	│   ├── starting_date
+	│   └── xdat_001_1234.bin
+	└── L1/
+		├── DetSSB.bin
+		├── grid.bin
+		├── starting_date
+		└── xdat_001_1234.bin
 ```
 
 Beginning of each time frame is saved in the `nnn/DD/starting_date` file, e.g.,
@@ -330,6 +331,9 @@ Beginning of each time frame is saved in the `nnn/DD/starting_date` file, e.g.,
 % cat 2d_0.25/001/H1/starting_date
 1.1260846080e+09
 ```
+
+With this structure the root directory `xdat_O3_C01` is passed to the search code
+as parameter `indir`.
 
 An example for two LIGO detectors H1 and L1, and data frame segments $nnn=001-008$ with pure Gaussian noise 2-day time segments with sampling time equal to 2s for a fiducial narrow band number $bbbb=1234$ (`xdatc_nnn_1234.bin`) coresponding the the band frequency $fpo=308.859375$ is [available here](https://polgraw.camk.edu.pl/H1L1_2d_0.25.tar.gz).
 
@@ -343,14 +347,14 @@ An example for two LIGO detectors H1 and L1, and data frame segments $nnn=001-00
 Prerequisites: C compiler , GSL library
 
 ```
-% gcc xdat-gauss-gaps.c  -o xdat-gauss-gaps.c -lm -lgsl -lgslcblas
+% gcc gauss--xdat-mask.c -o gauss-xdat-mask -lm -lgsl -lgslcblas
 ```
 
 ### Running
 
 The program takes input values from the command line:
 ```
-% ./gauss-xdat N amplitude sigma output-file [gaps-template]
+% ./gauss-xdat-mask N amplitude sigma output-file [gaps-template]
 ```
 where N is the length of the time series (in samples), amplitude and sigma are
 Gauss function parameters, output-file is the name of the output file and
@@ -360,6 +364,6 @@ usefull for testing).
 
 Example runL
 ```
-% ./xdat-gauss-gaps 86164 1 1 ../../../testdata/2d_0.25/001/H1/xdatc_001_1234.bin
+% ./gauss-xdat-mask 86164 1 1 xdat_001_1234.bin
 ```
 The output is a binary file containing `N` float-precision numbers.
