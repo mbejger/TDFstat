@@ -50,9 +50,9 @@ int main (int argc, char *argv[]) {
      char dtype[4], site[3];
      const char *H5FileName;
 
+     int gen_eph=0;
 #ifdef USE_LAL
-     int gen_eph;
-     const char *EphDir, *efile, *sfile;
+     const char *EphDir=NULL, *efile=NULL, *sfile=NULL;
      char eFname[MAX_LINE], sFname[MAX_LINE], eph_fname[MAX_LINE+32];
      double *DetSSB=NULL, *rDet=NULL, *rSSB=NULL;
      double mjd1, phir, elam = 0, position[4];
@@ -83,8 +83,8 @@ int main (int argc, char *argv[]) {
      use_sci = iniparser_getboolean (ini, "genseg:use_sci", 1);  // use science data only
      sci_regions = iniparser_getstring (ini, "genseg:sci_regions", NULL);   // file with science regions
      w_taper_dt = iniparser_getdouble (ini, "genseg:w_taper_dt", 600.);     // Tukey window tapering size in seconds; if <=0 do not apply window to science regions
-#ifdef USE_LAL
      gen_eph = iniparser_getboolean (ini, "genseg:gen_eph", 0);
+#ifdef USE_LAL
      EphDir = iniparser_getstring (ini, "genseg:EphDir", NULL);
      efile = iniparser_getstring (ini, "genseg:efile", NULL);
      sfile = iniparser_getstring (ini, "genseg:sfile", NULL);
@@ -107,7 +107,14 @@ int main (int argc, char *argv[]) {
      printf("[IN] EphDir = %s\n", EphDir);
      printf("[IN] efile = %s\n", efile);
      printf("[IN] sfile = %s\n", sfile);
+#else
+     printf("[IN] gen_eph = %d\n", gen_eph);
+     if (gen_eph) {
+	 printf("[ERROR] gen_eph = %d but the code was compiled without lalsuite.\n        Please set USE_LAL = yes in the Makefile\n", gen_eph);
+	 exit(EXIT_FAILURE);
+     }
 #endif
+     
      if (nod <= 0) {
           printf("nod <= 0 !\n");
           goto fail;

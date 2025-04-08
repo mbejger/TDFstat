@@ -1,15 +1,19 @@
 CC = gcc
+USE_LAL = yes
 
-LAL_FLAGS = -DUSE_LAL -I$(CONDA_PREFIX)/include
-LAL_LIBS = -L$(CONDA_PREFIX)/lib -llalpulsar -llalsupport -llalmetaio -llal
-#LAL_FLAGS =
-#LAL_LIBS =
+ifeq ($(strip $(USE_LAL)), yes)
+	LAL_FLAGS = -DUSE_LAL -I$(CONDA_PREFIX)/include
+	LAL_LIBS = -Wl,-rpath=$(CONDA_PREFIX)/lib -L$(CONDA_PREFIX)/lib -llalpulsar -llalsupport -llalmetaio -llal
+else
+	LAL_FLAGS =
+	LSL_LIBS =
+endif
 
 INIPARSER_DIR = ../utils/iniparser
 INIPARSER_FLAGS = -I$(INIPARSER_DIR)/src
 INIPARSER_LIBS = -L$(INIPARSER_DIR) -liniparser
 
-CFLAGS = -Wall $(LAL_FLAGS) $(FFTW_FLAGS) $(INIPARSER_FLAGS) -O2 -UDEBUG
+CFLAGS = -Wall $(LAL_FLAGS) $(INIPARSER_FLAGS) -O2 -UDEBUG
 
 LDFLAGS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
 	-Wl,-Bdynamic -lc -lm -lz -lpthread
