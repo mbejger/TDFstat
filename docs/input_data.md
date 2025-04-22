@@ -23,14 +23,14 @@ Typical All-sky search data generation workflow with O3 numbers:
 1. We used SFDB files with 2048 Hz bandwidth which contain STFT of length 1024 s
    overlapped in time by half (512 s).
 2. `extract_band` was used to extract narrow bands with $B=0.25\ Hz$. The
-   resulting sampling interval was $dt = 1/(2\ B) = 2\ s$. 
+   resulting sampling interval was $dt = 1/(2\ B) = 2\ s$.
    Since STFT length is 1024 s we have 512 samples/STFT, but we use only middle
    half of the inverse FFT which makes 256 samples per time chunk.
 3. `genseg` was used to assemble short time chunks into segments of length 6
    sidereal days which contain N samples:
 
 $$N = round(nod\cdot C\_SIDDAY/dt) = 258492$$
-  
+
    where $C\_SIDDAY$ is the duration of sidereal day in seconds.
    The whole O3 run time span was ~1 yr so we've got 60 segments.
 
@@ -52,15 +52,15 @@ where:
 In the names of files and directories, the **band number**, $bbbb$ is formatted using `%04d` specifier, e.g. `0072`.
 
 The **time segment** (or simply 'segment') has length $nod$ which is INTEGER
-number of days.  
-Segments are assigned subsequent natural numbers starting from 1.  
+number of days.
+Segments are assigned subsequent natural numbers starting from 1.
 In the names of files and directories the segment number ($nnn$) is formatted using `%03d` specifier, e.g. `001`.
 
 
 ----
 ## extract_band code
 
-This program converts Short Fourier Transformation series to time series.
+This program converts Short Fourier Transformation series into time series.
 It was written by Pia Astone (INFN, Physics Department of University of Rome "La
 Sapienza") a part of the PSS package used to create SFDB. The
 `extract_band_hdf_td` code is its substantially modified version by Paweł
@@ -71,9 +71,9 @@ output to HDF5 file.
 ### Compilation
 
 Source: currently part of a [private gitlab
-repo](https://gitlab.camk.edu.pl/polgraw-cw/scripts)  
+repo](https://gitlab.camk.edu.pl/polgraw-cw/scripts)
 Prerequisities: C compiler, selected files from the PSS library ([PSS
-library](https://git.ligo.org/pia.astone/create_sfdb)), FFTW3 & HDF5 libraries.  
+library](https://git.ligo.org/pia.astone/create_sfdb)), FFTW3 & HDF5 libraries.
 
 To compile, in the `extract_band/pss_sfdb` directory type
 ```
@@ -85,9 +85,9 @@ make extract_band_hdf_td
 `extract_band_hdf_td` reads following input parameters from stdin:
 ```
 string[170] out_file: output file name
-string[170] in_file: input file name (file with a list of all SFDB files)
-float fpo: reference frequency
-float B: badwidth
+string[170]  in_file: input file name (list of all SFDB files)
+float            fpo: reference frequency (starting frequency of the band)
+float              B: bandwidth
 ```
 e.g. create file `0072_H1.in`
 ```
@@ -101,13 +101,14 @@ and pass it as input:
 ./extract_band_hdf_td < 0072_H1.in
 ```
 
-Important remarks
+Remarks:
 
 - The file names can be specified with absolute or relative paths.
 - The code is designed to work in an *incremental mode* - if you add more files
   to `in_file` and `out_file` exists, the new data chunks will be **appended**
-  to it. For chunks already present in the HDF file only attributes gps_sec, nfft and
+  to it. For chunks already present in the HDF file only attributes mjdtime, nfft and
   sfdb_name are verified, no actual data is read.
+- If the out_file is corrupted (broken HDF5 structure) it will be re-created from the beginning.
 - the code is very generic - it does not know which band number is
   processed (but it can be encoded in the name of the input file).
 
@@ -117,7 +118,7 @@ Important remarks
 To simplify mass data generation, e.g. for all-sky search, we provide an example
 of bash script: `eb2hdf.sh`.
 It uses `extract_band` is to create STS data for all bands and all detectors
-following certain convention. Before using the script, first edit some parameters in 
+following certain convention. Before using the script, first edit some parameters in
 section marked "EDIT HERE":
 
 - eb - full path to the `extract_band_hdf_td` executable
@@ -126,17 +127,17 @@ section marked "EDIT HERE":
 - odir - path to the output directory (will be created); default: `sts_B${B}_ov${ov}/${det}`
 - fpo - check the definition of `fpo( <band_number> )` function
 
-To generate HDF file for detector `<det_name>` and for bands between 
+To generate HDF file for detector `<det_name>` and for bands between
 `<start_band>` and `<end_band>` as follows run:
 ```
 ./eb2hdf.sh <det_name> <start_band> [<end_band>]
 ```
 Currently det_name can be H1, L1 or V1. If `<end_band>` is omitted then only
-single band is generated.  
-The ilist file should contain one file per line, to create use: `ls -1 /somedirectory/*.SFDB09`  
+single band is generated.
+The ilist file should contain one file per line, to create use: `ls -1 /somedirectory/*.SFDB09`
 The input file for `extract_band` will be saved in:
-`sts_B${B}_ov${ov}/${det}/${B4}_${det}.in`  
-The standard output from `extract_band` will be saved in: `sts_B${B}_ov${ov}/${det}/eb2hdf-${B4}_${det}.out`  
+`sts_B${B}_ov${ov}/${det}/${B4}_${det}.in`
+The standard output from `extract_band` will be saved in: `sts_B${B}_ov${ov}/${det}/eb2hdf-${B4}_${det}.out`
 
 
 ### Output HDF5 file format
@@ -234,16 +235,18 @@ This code combines STS (short time series) chunks stored in a HDF5 file
 
 ### Compilation:
 
-[Source code](https://github.com/Polgraw/TDFstat/tree/main/genseg)  
-Prerequisities: C compiler, HDF5 library, lalsuite (if -DUSE_LAL is used in
-Makefile, this is required to generate ephemeris)
+[Source code](https://github.com/Polgraw/TDFstat/tree/main/genseg)
+Prerequisities: C compiler, HDF5 library, lalsuite (if USE_LAL=yes is set in the
+Makefile - this is required to generate ephemeris)
 
 lalsuite can be installed from conda-forge repository using [miniforge installer](https://conda-forge.org/download/):
 ```
 mamba create -n lal lalsuite
 mamba activate lal
 ```
-To compile type `make genseg-hdf`.  
+To compile type `make genseg-hdf`.
+If USE_LAL=yes then the executable will use runtime library path
+`$CONDA_PREFIX/lib` (to search for lal libraries).
 The old genseg version (used before O4) is preserved in subdirectory `old`.
 
 ### Running:
@@ -259,8 +262,8 @@ All configuration options are explained in the comments in this file.
 from gwpy.segments import DataQualityFlag, SegmentList
 import sys
 
-GPSstart = int(sys.argv[1]) # 1238166018 (1st April 2019, 15 UTC) 
-GPSend   = int(sys.argv[2]) # 1253314818 
+GPSstart = int(sys.argv[1]) # 1238166018 (1st April 2019, 15 UTC)
+GPSend   = int(sys.argv[2]) # 1253314818
 det_channel_name = sys.argv[3] # e.g. 'H1:DMT-ANALYSIS_READY'
 
 dqf = DataQualityFlag.query(det_channel_name, GPSstart, GPSend)
@@ -276,14 +279,14 @@ python get_sci_segment_list.py 1238166018 1253314818 V1:ITF_SCIENCE:1 > C00_V1_g
 * To calculate ephemeris the code should be run under proper conda environment
   and two efemerid files must be specified in the config file. They can be
   extracted from lalpulsar to te current directory this way:
-  
+
 ```bash
 cp $CONDA_PREFIX/share/lalpulsar/sun00-40-DE405.dat.gz .
 cp $CONDA_PREFIX/share/lalpulsar/earth00-40-DE405.dat.gz .
 gunzip sun00-40-DE405.dat.gz earth00-40-DE405.dat.gz
 ```
 
-To run genseg type `./genseg-hdf <config file>`. 
+To run genseg type `./genseg-hdf <config file>`.
 
 
 ## TDFstat input data structure
@@ -294,19 +297,19 @@ The input data are divided into time segments of typically a few days length and
 
 A single `search` run requires 2 data files for each detector `DD` and segment
 `nnn`, stored in `data_dir/nnn/DD` subdirectory, where `DD` is currently either
-`H1` (Hanford), `L1` (Livingston) or `V1` (Virgo Cascina): 
+`H1` (Hanford), `L1` (Livingston) or `V1` (Virgo Cascina):
 
 * `xdat_nnn_bbbb.bin` - time-domain narrow-band data sequence (`bbbb` is the number of frequency band),
 * `DetSSB.bin`  -  location  of  the  detector  w.r.t. the Solar System
   Barycenter (SSB), in Cartesian coordinates, sampled at `dt` sampling rate
-  (array of size `2N`).  
+  (array of size `2N`).
   The last two records in this file are the angle `phir`, determining the  position
   of Earth in its diurnal motion, and the obliquity of the ecliptic `epsm`,
-  both calculated for the first sample of the data. 
+  both calculated for the first sample of the data.
 
 Third file is the sky positions-frequency-spindown grid file in linear coordinates (common for all the detectors), stored in `data_dir/nnn` in case of the network search (one grid file is used by all the detectors) or in each detector directory separately (in case of single-detector searches):
 
-   * `grid.bin` - generator matrix of an optimal grid of templates (defining the parameter space; see [here](/grid_generation) for details).
+   * `grid.bin` - generator matrix of an optimal grid of templates (defining the parameter space; see [here](grid_generation) for details).
 
 A typical directory structure is as follows:
 
