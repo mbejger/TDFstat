@@ -1,7 +1,7 @@
 [genseg]
 
 # single input file in HDF5 format (shall we support multiple files?)
-infile = sts_B0.25_ov0.1/H1/sts_0072_H1.h5
+infile = sts_B0.25_ov0.1/H1/sts_bbbb_H1.h5
 
 # Starting time for time seqments
 startgps = 1238163456
@@ -13,7 +13,7 @@ nod = 6
 nseg = 99
 
 # Pulsar name / band number
-plsr = 0072
+plsr = bbbb
 
 # Output data directory
 DataDir = xdat_O3
@@ -36,7 +36,7 @@ out_replace = gauss
 use_sci = yes
 
 # list of scientific regions in gps time
-sci_regions = O3_H1_gps_sci_seg.txt
+sci_regions = O3_C01_H1_sci_segments
 
 # Tukey window tapering size in seconds; if <=0 do not apply window to science regions
 w_taper_dt = 600.
