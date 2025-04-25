@@ -47,7 +47,7 @@ int main (int argc, char *argv[]) {
      int format_version=1, nsamples, last_ichunk=-1;
      float bandwidth;
      double fpo;
-     char dtype[4], site[3];
+     char dtype[4], site[3], oband[5];
      const char *H5FileName;
 
      int gen_eph=0;
@@ -72,7 +72,7 @@ int main (int argc, char *argv[]) {
      startgps = iniparser_getdouble(ini, "genseg:startgps", 0.0);  // write time sequences starting from this time
      nod = iniparser_getint (ini, "genseg:nod", 0);                // number of days per segment
      nseg = iniparser_getint (ini, "genseg:nseg", 0);              // number of segments, infinity if <=0
-     plsr = iniparser_getstring (ini, "genseg:plsr", NULL);        // pulsar name or time segment no
+     plsr = iniparser_getstring (ini, "genseg:plsr", NULL);        // pulsar name or band number
      DataDir = iniparser_getstring (ini, "genseg:datadir", NULL);  // output directory
      overwrite = iniparser_getboolean (ini, "genseg:overwrite", 0);// allow to overwrite existing data
 
@@ -80,15 +80,39 @@ int main (int argc, char *argv[]) {
      maxasd = iniparser_getdouble (ini, "genseg:maxasd", 1.e-21);  // max. asd in band, used to calculate threshold for large outliers
      out_replace = iniparser_getstring (ini, "genseg:out_replace", "zero"); // replace outliers with zero or random gaussian value
 
-     use_sci = iniparser_getboolean (ini, "genseg:use_sci", 1);  // use science data only
+     use_sci = iniparser_getboolean (ini, "genseg:use_sci", 1);    // use science data only
      sci_regions = iniparser_getstring (ini, "genseg:sci_regions", NULL);   // file with science regions
      w_taper_dt = iniparser_getdouble (ini, "genseg:w_taper_dt", 600.);     // Tukey window tapering size in seconds; if <=0 do not apply window to science regions
      gen_eph = iniparser_getboolean (ini, "genseg:gen_eph", 0);
 #ifdef USE_LAL
-     EphDir = iniparser_getstring (ini, "genseg:EphDir", NULL);
-     efile = iniparser_getstring (ini, "genseg:efile", NULL);
-     sfile = iniparser_getstring (ini, "genseg:sfile", NULL);
+     EphDir = iniparser_getstring (ini, "genseg:EphDir", NULL);    // directory containing efile and sfile
+     efile = iniparser_getstring (ini, "genseg:efile", NULL);      // earth ephemeris file
+     sfile = iniparser_getstring (ini, "genseg:sfile", NULL);      // sun ephemeris file
 #endif
+     if (argc==3){
+          if (strlen(argv[2]) != 4) {
+               printf("[ERROR] Band number argument should be 4 digits including leading zeros\n");
+               goto fail;
+          }
+          strcpy(oband, argv[2]);
+          printf("[INFO] Band number overwrite enabled: bbbb -> %s\n", oband);
+          // substitute bbbb in the input file name and plsr with oband
+          char *p = strstr(H5FileName, "bbbb");
+          if (p != NULL) {
+               strncpy(p, oband, 4);
+          } else {
+               printf("[ERROR] bbbb not found in the input file name %s\n", H5FileName);
+               goto fail;
+          }
+          if (strcmp(plsr, "bbbb") == 0) {
+               p = strstr(plsr, "bbbb");
+               strncpy(p, oband, 4);
+          } else {
+               printf("[ERROR] bbbb not found in the band/pulsar name %s\n", plsr);
+               goto fail;
+          }
+     }
+
      printf("[IN] infile = %s\n", H5FileName);
      printf("[IN] startgps = %f\n", startgps);
      printf("[IN] nod = %d\n", nod);
@@ -114,7 +138,7 @@ int main (int argc, char *argv[]) {
 	 exit(EXIT_FAILURE);
      }
 #endif
-     
+
      if (nod <= 0) {
           printf("nod <= 0 !\n");
           goto fail;
