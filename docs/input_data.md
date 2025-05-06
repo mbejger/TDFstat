@@ -251,10 +251,10 @@ The old genseg version (used before O4) is preserved in subdirectory `old`.
 
 ### Running:
 
-`genseg-hdf` requires a configuration file in the INI format. An example file is
+`genseg-hdf` requires a configuration file in the INI format. An example config file is
 provided in the source directory
 [H1_0072_6d.g2d](https://github.com/Polgraw/TDFstat/blob/main/genseg/H1_0072_6d.g2d).
-All configuration options are explained in the comments in this file.
+All configuration parameters are explained in the comments in this file.
 
 * To generate list of Analysis Ready segments this python script can be used:
 
@@ -262,18 +262,19 @@ All configuration options are explained in the comments in this file.
 from gwpy.segments import DataQualityFlag, SegmentList
 import sys
 
-GPSstart = int(sys.argv[1]) # 1238166018 (1st April 2019, 15 UTC)
-GPSend   = int(sys.argv[2]) # 1253314818
-det_channel_name = sys.argv[3] # e.g. 'H1:DMT-ANALYSIS_READY'
+GPSstart = int(sys.argv[1]) # 1238166018 (O3 start - 2019-04-01T15:00:00)
+GPSend   = int(sys.argv[2]) # 1269363618 (O3 end - 2020-03-27T17:00:00 )
+det_channel_name = sys.argv[3] # e.g. 'H1:DMT-ANALYSIS_READY:1' or 'H1:DCS-ANALYSIS_READY_C01:1'
 
 dqf = DataQualityFlag.query(det_channel_name, GPSstart, GPSend)
 seg_science = SegmentList(dqf.active)
-print(seg_science)
+for s in seg_science:
+    print(s.start, s.end)
 ```
 ```bash
-python get_sci_segment_list.py 1238166018 1253314818 H1:DMT-ANALYSIS_READY > C00_H1_gps_sci_segments
-python get_sci_segment_list.py 1238166018 1253314818 L1:DMT-ANALYSIS_READY > C00_L1_gps_sci_segments
-python get_sci_segment_list.py 1238166018 1253314818 V1:ITF_SCIENCE:1 > C00_V1_gps_sci_segments
+python get_sci_segment_list.py 1238166018 1269363618 H1:DMT-ANALYSIS_READY:1 > O3_C00_H1_sci_segments
+python get_sci_segment_list.py 1238166018 1269363618 L1:DMT-ANALYSIS_READY:1 > O3_C00_L1_sci_segments
+python get_sci_segment_list.py 1238166018 1269363618 V1:ITF_SCIENCE:1 > O3_C00_V1_sci_segments
 ```
 
 * To calculate ephemeris the code should be run under proper conda environment
@@ -286,7 +287,20 @@ cp $CONDA_PREFIX/share/lalpulsar/earth00-40-DE405.dat.gz .
 gunzip sun00-40-DE405.dat.gz earth00-40-DE405.dat.gz
 ```
 
-To run genseg type `./genseg-hdf <config file>`.
+To generate time segments run:
+```
+./genseg-hdf <config_file> [bbbb]
+```
+The last parameter, band number written as 4 character, zero padded string `bbbb`, is optional. It is introduced to avoid creation of tousands of config files (e.g. all-sky case) which differ only by the band number. In such case, one can use single config file but two parameters, `infile` and `plsr` have to contain string `bbbb` e.g.:
+```
+infile = sts_B0.25_ov0.1/H1/sts_bbbb_H1.h5
+plsr = bbbb
+```
+Then the command line string will be inserted in place of `bbbb` string in those parameters, e.g.:
+```
+./genseg-hdf H1_bbbb_6d.g2d 0072
+```
+will generate segments for band 72.
 
 
 ## TDFstat input data structure
@@ -315,18 +329,19 @@ A typical directory structure is as follows:
 
 ```
 xdat_O3_C01/
-├── 001/
-	├── grid.bin
-	├── H1/
-	│   ├── DetSSB.bin
-	│   ├── grid.bin
-	│   ├── starting_date
-	│   └── xdat_001_1234.bin
-	└── L1/
-		├── DetSSB.bin
-		├── grid.bin
-		├── starting_date
-		└── xdat_001_1234.bin
+     └── 001/
+     	├── grids
+     	│    └── grid_001_1234_H1L1.bin
+     	├── H1/
+     	│    ├── DetSSB.bin
+     	│    ├── grid.bin
+     	│    ├── starting_date
+     	│    └── xdat_001_1234.bin
+     	└── L1/
+     		├── DetSSB.bin
+     		├── grid.bin
+     		├── starting_date
+     		└── xdat_001_1234.bin
 ```
 
 Beginning of each time frame is saved in the `nnn/DD/starting_date` file, e.g.,
