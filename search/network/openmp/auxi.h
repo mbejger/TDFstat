@@ -27,14 +27,14 @@ void lin2ast(double be1, double be2, int pm, double sepsm, double cepsm,
 	     double *sinal, double *cosal, double *sindel, double *cosdel);
 
 int ast2lin(double alfa, double delta, double epsm, double *be);
- 
+
 void spline(complex double *, int, complex double *);
 complex double splint (complex double *, complex double *, int, double);
 void splintpad (complex double *, double *, int, int, complex double*);
 void linterp (complex double *, double *, int, int, complex double*);
 void triginterp (complex double *ya, complex double *yb, double *shftf,
 		 int N, int nfft, complex double *outa, complex double *outb);
-double var (double *, int);
+double var (float *, int);
 
 void gridr (double *, int *, int *, int *, double, double);
 double FStat (FLOAT_TYPE *, int, int, int);
@@ -42,7 +42,7 @@ double FStat (FLOAT_TYPE *, int, int, int);
 int ludcmp (double *, int, int *, double *);
 int lubksb (double *, int, int *, double *);
 
-// gridopt 
+// gridopt
 int invm (const double *, int, double *);
 double det (const double *, int);
 

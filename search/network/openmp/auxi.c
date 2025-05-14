@@ -14,7 +14,7 @@
 
 
 // lin2ast described in Phys. Rev. D 82, 022005 (2010) (arXiv:1003.0844)
-void lin2ast (double be1, double be2, int pm, double sepsm, double cepsm, 
+void lin2ast (double be1, double be2, int pm, double sepsm, double cepsm,
 	      double *sinal, double *cosal, double *sindel, double *cosdel) {
 
   *sindel = be1*sepsm-(2*pm-3)*sqrt(1.-sqr(be1)-sqr(be2))*cepsm;
@@ -36,22 +36,22 @@ int ast2lin (double alfa, double delta, double epsm, double *be) {
     be[0] = cos(epsm)*sin(alfa)*cos(delta)+sin(epsm)*sin(delta);
     be[1] = cos(alfa)*cos(delta);
 
-    //#mb this is not needed at the moment 
- 
-    double d1 = asin(be[0]*sin(epsm) 
+    //#mb this is not needed at the moment
+
+    double d1 = asin(be[0]*sin(epsm)
             + sqrt(1. - be[0]*be[0] - be[1]*be[1])*cos(epsm)) - delta;
 
-//  double d2 = asin(be[0]*sin(epsm) 
+//  double d2 = asin(be[0]*sin(epsm)
 //          - sqrt(1. - be[0]*be[0] - be[1]*be[1])*cos(epsm)) - delta;
 
-    int pm; 
+    int pm;
 
     if(fabs(d1)  < 10.*DBL_EPSILON)
         pm = 1;
     else
         pm = 2;
 
-    return pm; 
+    return pm;
 } /* ast2lin */
 
 
@@ -120,9 +120,9 @@ void splintpad (complex double *ya, double *shftf, int N, int interpftpad,
 #pragma omp parallel default(shared) private(x)
 #endif
   {
-#if defined(_OPENMP)         
+#if defined(_OPENMP)
 #pragma omp for schedule(static)
-#endif       
+#endif
     for (i=0; i<N; ++i) {
       x = interpftpad*(i-shftf[i]);
       out[i] = splint (ya, y2, interpftpad*N, x);
@@ -144,10 +144,10 @@ void linterp (complex double *ya, double *shftf, int N, int interpftpad,
 	Output:
 	out[i] - value of the interpolating function at interpftpad*(i-shftf[i]).
      */
-     
+
      double x;
      int i;
-     
+
      for (i=0; i<N; ++i) {
 	  x = interpftpad*(i-shftf[i]);
 	  int i1 = (int) x;
@@ -158,7 +158,7 @@ void linterp (complex double *ya, double *shftf, int N, int interpftpad,
 	  //out[i] = (ya[i2]-ya[i1])*dx;
 	  out[i] = dya_abs*dx*cexp(dya_arg*dx*I);
      }
-     
+
 }
 
 
@@ -174,14 +174,14 @@ void triginterp (complex double *ya, complex double *yb, double *shftf, int N, i
 	Output:
 	outa[i], outb[i] - value of the interpolating function at (i-shftf[i]).
      */
-     
+
      double x;
      int i, k;
      complex double ef, ff, oua, oub;
      double invnfft = 1./nfft;
 
      ef = 2*M_PI*invnfft*I;
-     
+
      for (i=0; i<N; ++i) {
 	  x = (double)i-shftf[i];
 	  ff = ef*x;
@@ -205,7 +205,7 @@ void triginterp (complex double *ya, complex double *yb, double *shftf, int N, i
 
 
 
-double var (double *x, int n) {
+double var (float *x, int n) {
   /* var(x, n) returns the variance (square of the standard deviation)
      of a given vector x of length n.
   */
@@ -480,7 +480,7 @@ int compared2c(const void *a, const void *b) {
 
   double* da = (double*)a;
   double* db = (double*)b;
-  
+
   int diff1 = (da[0] > db[0]) - (da[0] < db[0]);
   if (diff1 != 0) return diff1;
   return (da[1] > db[1]) - (da[1] < db[1]);
