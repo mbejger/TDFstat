@@ -6,7 +6,7 @@ ARCH = cascadelake
 # SIMD=NONE implies usege of sincos function, otherwise the SLEEF library is used.
 # It does not affect SIMD optimizations by compiler and FFTW3 dispatchers.
 SIMD = AVX2
-# legacy option: USE_AVX2_SINCOS 
+# legacy option: USE_AVX2_SINCOS
 
 # PREC = [FLOAT, DOUBLE] precission used in the spindown loop and for output
 PREC = FLOAT
@@ -41,16 +41,16 @@ else
 endif
 
 #TARGET = gwsearch-${ARCH}-$(shell echo $(PERF) | tr A-Z a-z)-oldtrig
-TARGET = gwsearch-${ARCH}-$(shell echo $(PERF) | tr A-Z a-z)-R9
+TARGET = gwsearch-${ARCH}-$(shell echo $(PERF) | tr A-Z a-z)
 
 VER := $(shell git rev-parse HEAD)
 
-CC = gcc -std=gnu11 -static-libgcc -fopenmp #-flto
-#-flto ?? speeds up a little for AVX512 but slows down for AVX2 
+CC = gcc -std=gnu17 -static-libgcc -fopenmp #-flto
+#-flto ?? speeds up a little for AVX512 but slows down for AVX2
 
 # TIMERS=1 measure total time, TIMERS=3 measure spindown loop time
 # PREFIX is the default output directory
-CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=3 -D$(SINCOS) -UUSE_LOCKING  -DCOMP_${PREC} ${VCFLAGS} #-DVERBOSE 
+CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=3 -D$(SINCOS) -UUSE_LOCKING  -DCOMP_${PREC} ${VCFLAGS} #-DVERBOSE
 CFLAGS += -I$(FFTW_DIR)/include -I$(INIPARSER_DIR)/src
 CFLAGS += -g -Wall -Wno-unused \
 	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops \
@@ -80,7 +80,7 @@ $(TARGET): $(DEPS)
 	$(CC) $(LDFLAGS) -o $@ $(SRC) $(CFLAGS) $(LDLIBS)
 
 clean:
-	rm -f *.o 
+	rm -f *.o
 
 uninstall: clean
 	rm -f $(TARGET)
@@ -89,5 +89,5 @@ uninstall: clean
 
 #----------------------------------------------
 
-sigen: sigen.o auxi.o settings.o 
+sigen: sigen.o auxi.o settings.o
 	$(CC) -o $@ $^ -Wl,-Bdynamic -lc -lrt -lm
