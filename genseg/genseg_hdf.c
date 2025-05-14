@@ -357,6 +357,10 @@ int main (int argc, char *argv[]) {
 
                // chunk possition in time segment
                chunk_i0 = (int)round((tchunk_start - tseg_start)/dt);
+               if ((ichunk>1) && (chunk_i0 > chunk_i1+1)){
+                    printf("[INFO] gap in segment data detected ! [%d-%d]\n", chunk_i1, chunk_i0);
+                    // do nothing, just inform
+               }
                chunk_i1 = chunk_i0 + nsamples - 1;
 
                DEBUG_PRINT(("   [DEB] ichunk=%d  t=%d  [%d, %d] ",
@@ -369,9 +373,7 @@ int main (int argc, char *argv[]) {
                     continue;
                }
                if ( chunk_i0 >= N ) {
-                    printf("[INFO] gap in data detected !\n");
-                    //DEBUG_PRINT(("   gap in data detected !\n"));
-                    //goto fail;
+                    printf("[INFO] gap between segments detected !\n");
                     break;
                }
 
