@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include <math.h>
 #include <stdio.h>
-#include <string.h> 
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -36,8 +36,8 @@ void search(
 
 
   struct flock lck;
-  
-  int pm, mm, nn;       // hemisphere, sky positions 
+
+  int pm, mm, nn;       // hemisphere, sky positions
   int sgnlc=0;          // number of candidates
   FLOAT_TYPE *sgnlv;    // array with candidates data
   long totsgnl;        // total number of candidates
@@ -49,7 +49,7 @@ void search(
 #ifdef TIMERS
   struct timespec tstart = get_current_time(CLOCK_REALTIME), tend;
 #endif
-  
+
   // Allocate buffer for triggers
   sgnlv = (FLOAT_TYPE *)calloc(NPAR*sett->bufsize, sizeof(FLOAT_TYPE));
 
@@ -65,23 +65,23 @@ void search(
 	    s_range->nst, s_range->sst, *FNum);
     fseek(state, 0, SEEK_SET);
   }
-  
-  /* Loop over hemispheres */ 
-  
+
+  /* Loop over hemispheres */
+
   for (pm=s_range->pst; pm<=s_range->pmr[1]; ++pm) {
 
-    sprintf (outname, "%s/triggers_%03d_%04d%s_%d.bin", 
+    sprintf (outname, "%s/triggers_%03d_%04d%s_%d.bin",
 	     opts->outdir, opts->seg, opts->band, opts->label, pm);
     // remove existing trigger file if checkpointing is disabled
     if(! opts->checkp_flag) remove(outname);
 
     totsgnl = 0;
-    
-    /* Two main loops over sky positions */ 
-    
-    for (mm=s_range->mst; mm<=s_range->mr[1]; ++mm) {	
-      for (nn=s_range->nst; nn<=s_range->nr[1]; ++nn) {	
-	
+
+    /* Two main loops over sky positions */
+
+    for (mm=s_range->mst; mm<=s_range->mr[1]; ++mm) {
+      for (nn=s_range->nst; nn<=s_range->nr[1]; ++nn) {
+
 	/* Loop over spindowns is inside job_core() */
 	status = job_core(
 			  pm,           // hemisphere
@@ -90,13 +90,13 @@ void search(
 			  sett,         // search settings
 			  opts,         // cmd opts
 			  s_range,      // range for searching
-			  plans,        // fftw plans 
+			  plans,        // fftw plans
 			  fftw_arr,     // arrays for fftw
 			  aux,          // auxiliary arrays
 			  &sgnlc,       // current number of candidates
 			  sgnlv,        // candidate array
 			  FNum);        // candidate signal number
-	
+
 	// Get back to regular spin-down range
 	s_range->sst = s_range->spndr[0];
 
@@ -119,7 +119,7 @@ void search(
 	     totsgnl += sgnlc;
 	     if (close(fd) < 0) perror ("close()");
 	     sgnlc=0;
-	     
+
 	     if(opts->checkp_flag) {
 	       ftruncate(fileno(state), 0);
 	       fprintf(state, "%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
@@ -131,14 +131,14 @@ void search(
 	       }
 	     }
 	     save_state = 0;
-	     
+
 	} /* if sgnlc > sett-nfft */
       } // for nn
       s_range->nst = s_range->nr[0];
     } // for mm
-    s_range->mst = s_range->mr[0]; 
+    s_range->mst = s_range->mr[0];
 
-    // Write the leftover from the last iteration of the buffer 
+    // Write the leftover from the last iteration of the buffer
     if((fd = open(outname, tmode, S_IRUSR|S_IWUSR|S_IRGRP)) < 0) {
 	 perror(outname);
 	 return;
@@ -155,20 +155,20 @@ void search(
     totsgnl += sgnlc;
     printf("\n### Total number of signals in %s = %ld\n\n", outname, totsgnl);
     if (close(fd) < 0) perror ("close()");
-    sgnlc=0; 
-    
+    sgnlc=0;
+
   } // for pm
-  
+
 
   if(opts->checkp_flag) {
     // empty state file to prevent restart after successful end
     ftruncate(fileno(state), 0);
     fclose(state);
   }
-  
+
   // Free triggers buffer
   free(sgnlv);
-  
+
 #ifdef TIMERS
   tend = get_current_time(CLOCK_REALTIME);
   double time_elapsed = get_time_difference(tstart, tend);
@@ -180,24 +180,24 @@ void search(
 }
 
 
-  /* Main job */ 
+  /* Main job */
 
 int job_core(int pm,                   // Hemisphere
 	     int mm,                   // Grid 'sky position'
 	     int nn,                   // Second grid 'sky position'
 	     Search_settings *sett,    // Search settings
-	     Command_line_opts *opts,  // Search options 
+	     Command_line_opts *opts,  // Search options
 	     Search_range *s_range,    // Range for searching
 	     FFTW_plans *plans,        // Plans for fftw
 	     FFTW_arrays *fftw_arr,    // Arrays for fftw
 	     Aux_arrays *aux,          // Auxiliary arrays
-	     int *sgnlc,               // Candidate trigger parameters 
-	     FLOAT_TYPE *sgnlv,        // Candidate array 
+	     int *sgnlc,               // Candidate trigger parameters
+	     FLOAT_TYPE *sgnlv,        // Candidate array
 	     int *FNum) {              // Candidate signal number
 
   int i, j, n;
   int smin = s_range->sst, smax = s_range->spndr[1];
-  double al1, al2, sinalt, cosalt, sindelt, cosdelt, 
+  double al1, al2, sinalt, cosalt, sindelt, cosdelt,
     nSource[3], ft, het0;
   FLOAT_TYPE sgnlt[NPAR], sgnl0;
   FLOAT_TYPE _tmp1[sett->nifo][sett->N] __attribute__((aligned(128)));
@@ -205,7 +205,7 @@ int job_core(int pm,                   // Hemisphere
   struct timespec tstart, tend;
   double spindown_timer = 0;
   int spindown_counter  = 0;
-  
+
 
   /* Matrix	M(.,.) (defined on page 22 of PolGrawCWAllSkyReview1.pdf file)
      defines the transformation form integers (bin, ss, nn, mm) determining
@@ -243,7 +243,7 @@ int job_core(int pm,                   // Hemisphere
   complex double exph;
 
   // Change linear (grid) coordinates to real coordinates
-  lin2ast(al1/sett->oms, al2/sett->oms, 
+  lin2ast(al1/sett->oms, al2/sett->oms,
 	  pm, sett->sepsm, sett->cepsm,
 	  &sinalt, &cosalt, &sindelt, &cosdelt);
 
@@ -254,15 +254,15 @@ int job_core(int pm,                   // Hemisphere
 
   het0 = fmod(nn*sett->M[8] + mm*sett->M[12], sett->M[0]);
 
-  // Nyquist frequency 
+  // Nyquist frequency
   int nyqst = (sett->nfft)/2 + 1;
 
-  // Loop for each detector 
-  for(n=0; n<sett->nifo; ++n) { 
+  // Loop for each detector
+  for(n=0; n<sett->nifo; ++n) {
 
-  /* Amplitude modulation functions aa and bb 
-   * for each detector (in signal sub-struct 
-   * of _detector, ifo[n].sig.aa, ifo[n].sig.bb) 
+  /* Amplitude modulation functions aa and bb
+   * for each detector (in signal sub-struct
+   * of _detector, ifo[n].sig.aa, ifo[n].sig.bb)
    */
 
     modvir(sinalt, cosalt, sindelt, cosdelt,
@@ -272,7 +272,7 @@ int job_core(int pm,                   // Hemisphere
     nSource[0] = cosalt*cosdelt;
     nSource[1] = sinalt*cosdelt;
     nSource[2] = sindelt;
-    
+
     shft1 = nSource[0]*ifo[n].sig.DetSSB[0]
           + nSource[1]*ifo[n].sig.DetSSB[1]
           + nSource[2]*ifo[n].sig.DetSSB[2];
@@ -290,40 +290,40 @@ int job_core(int pm,                   // Hemisphere
 
 #pragma omp for schedule(static)
       for(i=0; i<sett->N; ++i) {
-	// Phase modulation 
+	// Phase modulation
 	phase = het0*i + sett->oms*ifo[n].sig.shft[i];
 	sincos(phase, &sp, &cp);
 	exph = cp - I*sp;
 
-	// Matched filter 
+	// Matched filter
 	ifo[n].sig.xDatma[i] = ifo[n].sig.xDat[i]*ifo[n].sig.aa[i]*exph;
 	ifo[n].sig.xDatmb[i] = ifo[n].sig.xDat[i]*ifo[n].sig.bb[i]*exph;
       }
 
       /* Resampling using spline interpolation:
-       * This will double the sampling rate 
-       */ 
+       * This will double the sampling rate
+       */
 #pragma omp for schedule(static)
       for(i=0; i < sett->N; ++i) {
 	fftw_arr->xa[i] = ifo[n].sig.xDatma[i];
 	fftw_arr->xb[i] = ifo[n].sig.xDatmb[i];
       }
 
-      // Zero-padding (filling with 0s up to sett->nfft, 
+      // Zero-padding (filling with 0s up to sett->nfft,
       // the nearest power of 2)
 #pragma omp for schedule(static)
       for (i=sett->N; i<sett->nfft; ++i) {
 	   fftw_arr->xa[i] = 0.;
 	   fftw_arr->xb[i] = 0.;
       }
-      
+
     } //omp parallel
 
 
     fftw_execute_dft(plans->pl_int,fftw_arr->xa,fftw_arr->xa);  //forward fft (len nfft)
     fftw_execute_dft(plans->pl_int,fftw_arr->xb,fftw_arr->xb);  //forward fft (len nfft)
 
-    // move frequencies from second half of spectrum; 
+    // move frequencies from second half of spectrum;
     // and zero frequencies higher than nyquist
     // loop length: nfft - nyqst = nfft - nfft/2 - 1 = nfft/2 - 1
 
@@ -332,14 +332,14 @@ int job_core(int pm,                   // Hemisphere
 #pragma omp parallel for schedule(static) default(shared)
     for(i=nyqst; i<nyqst + sett->Ninterp - sett->nfft; ++i)
       fftw_arr->xa[i] = 0.;
-    
+
     for(i=nyqst + sett->Ninterp - sett->nfft, j=nyqst; i<sett->Ninterp; ++i, ++j)
       fftw_arr->xb[i] = fftw_arr->xb[j];
 #pragma omp parallel for schedule(static) default(shared)
     for(i=nyqst; i<nyqst + sett->Ninterp - sett->nfft; ++i)
       fftw_arr->xb[i] = 0.;
 
-    
+
     // Backward fft (len Ninterp = nfft*interpftpad)
     fftw_execute_dft(plans->pl_inv,fftw_arr->xa,fftw_arr->xa);
     fftw_execute_dft(plans->pl_inv,fftw_arr->xb,fftw_arr->xb);
@@ -353,29 +353,29 @@ int job_core(int pm,                   // Hemisphere
     //  struct timeval tstart = get_current_time(), tend;
 
     // Spline interpolation to xDatma, xDatmb arrays
-    splintpad(fftw_arr->xa, ifo[n].sig.shftf, sett->N, 
-	      sett->interpftpad, ifo[n].sig.xDatma);   
-    splintpad(fftw_arr->xb, ifo[n].sig.shftf, sett->N, 
+    splintpad(fftw_arr->xa, ifo[n].sig.shftf, sett->N,
+	      sett->interpftpad, ifo[n].sig.xDatma);
+    splintpad(fftw_arr->xb, ifo[n].sig.shftf, sett->N,
 	      sett->interpftpad, ifo[n].sig.xDatmb);
 
 
-  } // end of detector loop 
+  } // end of detector loop
 
-  // square sums of modulation factors 
+  // square sums of modulation factors
   FLOAT_TYPE aa = 0., bb = 0.;
 
   for(n=0; n<sett->nifo; ++n) {
 
     double aatemp = 0., bbtemp = 0.;
-    
+
     for(i=0; i<sett->N; ++i) {
       aatemp += sqr(ifo[n].sig.aa[i]);
       bbtemp += sqr(ifo[n].sig.bb[i]);
     }
-    
-    aa += aatemp/ifo[n].sig.sig2; 
-    bb += bbtemp/ifo[n].sig.sig2;   
-    
+
+    aa += aatemp/ifo[n].sig.sig2;
+    bb += bbtemp/ifo[n].sig.sig2;
+
     for(i=0; i<sett->N; ++i) {
       ifo[n].sig.xDatma[i] /= ifo[n].sig.sig2;
       ifo[n].sig.xDatmb[i] /= ifo[n].sig.sig2;
@@ -383,28 +383,28 @@ int job_core(int pm,                   // Hemisphere
   }
 
 
-  // Check if the signal is added to the data 
-  // or the range file is given:  
-  // if not, proceed with the wide range of spindowns 
-  // if yes, use smin = s_range->sst, smax = s_range->spndr[1]  
+  // Check if the signal is added to the data
+  // or the range file is given:
+  // if not, proceed with the wide range of spindowns
+  // if yes, use smin = s_range->sst, smax = s_range->spndr[1]
   if(!strcmp(opts->addsig, "") && !strcmp(opts->range_file, "")) {
 
-    // Spindown range defined using Smin and Smax (settings.c)  
+    // Spindown range defined using Smin and Smax (settings.c)
     smin = trunc((sett->Smin - nn*sett->M[9] - mm*sett->M[13])/sett->M[5]);
     smax = trunc(-(nn*sett->M[9] + mm*sett->M[13] + sett->Smax)/sett->M[5]);
-    
-    // swapping smin and smax in case when grid matrix  
+
+    // swapping smin and smax in case when grid matrix
     // values are defined with opposite signs than ''usual''
     if(smin > smax) {
-      
+
       smin = smin + smax ;
       smax = smin - smax ;
       smin = smin - smax ;
-      
+
     }
   }
 
-  
+
   const int s_stride = 1;
   printf ("\n>>%d\t%d\t%d\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
 
@@ -414,14 +414,14 @@ int job_core(int pm,                   // Hemisphere
 
   static FLOAT_TYPE *F;
   if (!F) F = (FLOAT_TYPE *)malloc(2*sett->nfft*sizeof(FLOAT_TYPE));
-  
+
   //private loop counter: ss
   //private (declared inside): ii,Fc,het1,k,veto_status,a,v,_p,_c,_s,status
   //shared default: nn,mm,sett,_tmp1,ifo,het0,bnd,plans,opts,aa,bb,
   //                fftw_arr (zostawiamy i robimy nowe), FNum (atomic!)
   //we use shared plans and  fftw_execute with 'new-array' interface
 
-    
+
     /* Spindown loop  */
 
   for(ss=smin; ss<=smax; ss += s_stride) {
@@ -429,19 +429,19 @@ int job_core(int pm,                   // Hemisphere
 #if TIMERS>2
     //tstart = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
       tstart = get_current_time(CLOCK_MONOTONIC);
-#endif 
-      
+#endif
+
       // Spindown parameter
       //FLOAT_TYPE spnd = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
       sgnlt[1] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
 
       FLOAT_TYPE het1;
-      
+
 #ifdef VERBOSE
       //print a 'dot' every new spindown
       printf ("."); fflush (stdout);
-#endif 
-      
+#endif
+
       het1 = fmod(ss*sett->M[4], sett->M[0]);
       if(het1<0) het1 += sett->M[0];
 
@@ -462,7 +462,7 @@ int job_core(int pm,                   // Hemisphere
       for (i=sett->nmin; i<=sett->nmax; ++i){
 	F[i] = NORM(fxa[i])/aa + NORM(fxb[i])/bb ;
       }
-      
+
       (*FNum)++;
 
 #undef FSTATDEB
@@ -479,7 +479,7 @@ int job_core(int pm,                   // Hemisphere
 	FILE *f1 = fopen(f1name, "w");
 	for(i=0; i<(sett->nmax-sett->nmin); i++)
 	  fprintf(f1, "%d   %lf   %lf  %lf  %lf  %lf %lf\n", i, fraw[i],
-		  2.*M_PI*i/((double) sett->fftpad*sett->nfft) + sgnl0, 
+		  2.*M_PI*i/((double) sett->fftpad*sett->nfft) + sgnl0,
 		  sqr(creal( ifo[0].sig.xDatma[2*i] )),
 		  sqr(cimag(ifo[0].sig.xDatmb[2*i])),
 		  sqr(creal(ifo[1].sig.xDatma[2*i])),
@@ -495,7 +495,7 @@ int job_core(int pm,                   // Hemisphere
       }
 
       /* select triggers */
-#if 1
+#if 0
       int dd = sett->dd;
       /* find the highest maximum (above trl) in each block of length dd;
 	 dd is set to (1/day frequency in units of F indices)-1,
@@ -512,7 +512,7 @@ int job_core(int pm,                   // Hemisphere
 	  Fc = F[j];
 	  j++;
 	}
-	
+
 	if ( ii < 0 ) continue; // no maximum in this block
 #else
 	for(i=sett->nmin; i<sett->nmax; ++i) {
@@ -524,15 +524,15 @@ int job_core(int pm,                   // Hemisphere
 		if(F[i] > Fc) {
 		    ii = i;
 		    Fc = F[i];
-		} // if F[i] 
+		} // if F[i]
 	    } // while i
-	    
-#endif	
+
+#endif
 	// Candidate signal frequency
 	sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
-	  
-	// Checking if signal is within a known instrumental line 
-	int k, veto_status = 0; 
+
+	// Checking if signal is within a known instrumental line
+	int k, veto_status = 0;
 	for(k=0; k<sett->numlines_band; k++){
 	  if(sgnlt[0]>=sett->lines[k][0] && sgnlt[0]<=sett->lines[k][1]) {
 	    veto_status=1;
@@ -541,7 +541,7 @@ int job_core(int pm,                   // Hemisphere
 	}
 
 	if(!veto_status) {
-	  
+
 	  if ( *sgnlc >= sett->bufsize ) {
 	    printf("[ERROR] Triggers buffer size is too small ! sgnlc=%d\n", *sgnlc);
 	    exit(EXIT_FAILURE);
@@ -554,25 +554,25 @@ int job_core(int pm,                   // Hemisphere
 	    sgnlv[NPAR*(*sgnlc)+j] = sgnlt[j];
 
 	  (*sgnlc)++;
-	  
+
 #ifdef VERBOSE
-	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
+	  printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n",
 		  *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
 #endif
 	}
       } // for i
 
-      
+
 #if TIMERS>2
       //tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
       tend = get_current_time(CLOCK_MONOTONIC);
       spindown_timer += get_time_difference(tstart, tend);
       spindown_counter++;
 #endif
-      
-    } // for ss 
-  
-#ifndef VERBOSE 
+
+    } // for ss
+
+#ifndef VERBOSE
   printf("Number of signals found: %d (buffer %d%% full)\n", *sgnlc, (*sgnlc)*100/(sett->bufsize/2) );
 #endif
 
@@ -583,5 +583,5 @@ int job_core(int pm,                   // Hemisphere
 #endif
 
   return 0;
-  
+
 } // jobcore
