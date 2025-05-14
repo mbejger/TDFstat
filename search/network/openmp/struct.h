@@ -22,7 +22,7 @@ typedef struct _comm_line_opts {
      double thr;
      double fpo_val, narrowdown, overlap;
      const char *indir, *outdir, *range_file, *grid_file, *dump_range_file,
-           *usedet, *addsig, *fstat_norm, *label;
+          *usedet, *addsig, *fstat_norm, *label;
      char state_file[FNAME_LENGTH];
 
 } Command_line_opts;
@@ -64,8 +64,8 @@ typedef struct _fftw_arrays {
 /* Search range  */
 typedef struct _search_range {
 
-  int pmr[2], mr[2], nr[2], spndr[2];
-  int pst, mst, nst, sst;
+     int pmr[2], mr[2], nr[2], spndr[2];
+     int pst, mst, nst, sst;
 
 } Search_range;
 
@@ -76,10 +76,6 @@ typedef struct _fftw_plans {
      fftw_plan pl_int,  // interpolation forward
                pl_inv;  // interpolation backward
      FFTW_PRE(_plan) plan;
-
-     /*  fftw_plan plan2,   // main plan
-     pl_int2, // interpolation forward
-     pl_inv2; // interpolation backward */
 
 } FFTW_plans;
 
@@ -96,88 +92,88 @@ typedef struct _aux_arrays {
 /* Search settings */
 typedef struct _search_settings {
 
-  double fpo,    // Band frequency
-         dt,     // Sampling time
-         B,      // Bandwidth
-         oms,    // Dimensionless angular frequency (fpo)
-         omr,    // C_OMEGA_R * dt
-                 // (dimensionless Earth's angular frequency)
-         Smin,   // Minimum spindown
-         Smax,   // Maximum spindown
-         sepsm,	 // sin(epsm)
-         cepsm;	 // cos(epsm)
+     double fpo,    // Band frequency
+            dt,     // Sampling time
+            B,      // Bandwidth
+            oms,    // Dimensionless angular frequency (fpo)
+            omr,    // C_OMEGA_R * dt
+                    // (dimensionless Earth's angular frequency)
+            Smin,   // Minimum spindown
+            Smax,   // Maximum spindown
+            sepsm,	// sin(epsm)
+            cepsm;	// cos(epsm)
 
-  int nfft,       // length of fft
-      nod,        // number of days of observation
-      N,          // number of data points
-      nfftf,      // nfft * fftpad
-      nmax,	  // first and last point
-      nmin, 	  // of Fstat
-      s,          // number of spindowns
-      nd,         // degrees of freedom
-      interpftpad,
-      fftpad,     // zero padding
-      Ninterp, 	  // for resampling (set in plan_fftw() init.c)
-      nifo,       // number of detectors
-      bufsize,    // buffer size for triggers
-      dd;         // searching for F maxima (triggers) in blocks of dd size
+     int nfft,       // length of fft
+         nod,        // number of days of observation
+         N,          // number of data points
+         nfftf,      // nfft * fftpad
+         nmax,	      // first and last point
+         nmin, 	 // of Fstat
+         s,          // number of spindowns
+         nd,         // degrees of freedom
+         interpftpad,
+         fftpad,     // zero padding
+         Ninterp, 	 // for resampling (set in plan_fftw() init.c)
+         nifo,       // number of detectors
+         bufsize,    // buffer size for triggers
+         dd;         // searching for F maxima (triggers) in blocks of dd size
 
-  double *M;      // Grid-generating matrix (or Fisher matrix,
-                  // in case of coincidences)
-    //double *invM;   // Inverse of M
-  double invM[4][4];   // Inverse of M
+     double *M;           // Grid-generating matrix (or Fisher matrix,
+                          // in case of coincidences)
+     double invM[4][4];   // Inverse of M
 
-  double vedva[4][4];   // transformation matrix: its columns are
-                        // eigenvectors, each component multiplied
-                        // by sqrt(eigval), see init.c manage_grid_matrix():
-                        // sett->vedva[i][j]  = eigvec[i][j]*sqrt(eigval[j])
+     double vedva[4][4];   // transformation matrix: its columns are
+                           // eigenvectors, each component multiplied
+                           // by sqrt(eigval), see init.c manage_grid_matrix():
+                           // sett->vedva[i][j]  = eigvec[i][j]*sqrt(eigval[j])
 
-  double lines[MAXL][2]; // Array for lines in given band
-  int numlines_band;     // number of lines in band
+     double lines[MAXL][2]; // Array for lines in given band
+     int numlines_band;     // number of lines in band
 
 } Search_settings;
 
 
 /* Amplitude modulation function coefficients */
 typedef struct _ampl_mod_coeff {
+
 	double c1, c2, c3, c4, c5, c6, c7, c8, c9;
+
 } Ampl_mod_coeff;
 
 
 /* Detector and its data related settings */
 typedef struct _detector {
 
-    char xdatname[FNAME_LENGTH];
-    char name[DETNAME_LENGTH];
+     char xdatname[FNAME_LENGTH];
+     char name[DETNAME_LENGTH];
 
-    double ephi, 		// Geographical latitude phi in radians
-	   elam, 		// Geographical longitude in radians
-	   eheight,             // Height h above the Earth ellipsoid in meters
-           egam; 		// Orientation of the detector gamma
+     double ephi, 		// Geographical latitude phi in radians
+            elam, 		// Geographical longitude in radians
+            eheight,     // Height h above the Earth ellipsoid in meters
+            egam; 		// Orientation of the detector gamma
 
-    Ampl_mod_coeff amod;
-    Signals sig;
+     Ampl_mod_coeff amod;
+     Signals sig;
 
 } Detector_settings;
 
 /* Global array of detectors (network) */
 extern Detector_settings ifo[MAX_DETECTORS];
 
-
 /* Command line option struct for coincidences */
 typedef struct _comm_line_opts_coinc {
 
      int help_flag;
 
-     int shift, // Cell shifts  (4 digit number corresponding to fsda, e.g. 0101)
-                // Cell scaling in fsda: 4 numbers corresponding to
-	  scalef,   // frequency f,
-	  scales,   // spindown s,
-	  scaled,   // declination d,
-	  scalea,   // right ascencion a
-	  refr,  // Reference frame
-	  band,  // band number
-	  hemi;  // Hemisphere
+     int shift,    // Cell shifts  (4 digit number corresponding to fsda, e.g. 0101)
+                   // Cell scaling in fsda: 4 numbers corresponding to
+         scalef,   // frequency f,
+         scales,   // spindown s,
+         scaled,   // declination d,
+         scalea,   // right ascencion a
+         refr,     // Reference frame
+         band,     // band number
+         hemi;     // Hemisphere
 
      // Minimal number of coincidences recorded in the output
      int mincoin;
@@ -189,12 +185,12 @@ typedef struct _comm_line_opts_coinc {
 
 typedef struct _triggers {
 
-  int frameinfo[256][3];    // Info about candidates in frames:
-                            // - [0] frame number, [1] initial number
-                            // of candidates, [2] number of candidates
-                            // after sorting (unique)
+     int frameinfo[256][3];    // Info about candidates in frames:
+                               // - [0] frame number, [1] initial number
+                               // of candidates, [2] number of candidates
+                               // after sorting (unique)
 
-  int frcount, goodcands;
+     int frcount, goodcands;
 
 } Candidate_triggers;
 
