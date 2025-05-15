@@ -24,7 +24,7 @@
 #endif
 
 void lin2ast(double be1, double be2, int pm, double sepsm, double cepsm,
-	     double *sinal, double *cosal, double *sindel, double *cosdel);
+             double *sinal, double *cosal, double *sindel, double *cosdel);
 
 int ast2lin(double alfa, double delta, double epsm, double *be);
 
@@ -33,7 +33,7 @@ complex double splint (complex double *, complex double *, int, double);
 void splintpad (complex double *, double *, int, int, complex double*);
 void linterp (complex double *, double *, int, int, complex double*);
 void triginterp (complex double *ya, complex double *yb, double *shftf,
-		 int N, int nfft, complex double *outa, complex double *outb);
+		       int N, int nfft, complex double *outa, complex double *outb);
 double var (float *, int);
 
 void gridr (double *, int *, int *, int *, double, double);
