@@ -24,14 +24,14 @@ extern volatile sig_atomic_t save_state;
 
 
 // Main searching function (loops inside)
-void search(
-          Search_settings *sett,
-          Command_line_opts *opts,
-          Search_range *s_range,
-          FFTW_plans *plans,
-          FFTW_arrays *fftw_arr,
-          Aux_arrays *aux,
-          int *FNum ) {
+void search( Search_settings *sett,
+             Command_line_opts *opts,
+             Search_range *s_range,
+             FFTW_plans *plans,
+             FFTW_arrays *fftw_arr,
+             Aux_arrays *aux,
+             int *FNum )
+{
 
 
      struct flock lck;
@@ -177,18 +177,18 @@ void search(
 /* Main job */
 
 int job_core(
-     int pm,                   // Hemisphere
-     int mm,                   // Grid 'sky position'
-     int nn,                   // Second grid 'sky position'
-     Search_settings *sett,    // Search settings
-     Command_line_opts *opts,  // Search options
-     Search_range *s_range,    // Range for searching
-     FFTW_plans *plans,        // Plans for fftw
-     FFTW_arrays *fftw_arr,    // Arrays for fftw
-     Aux_arrays *aux,          // Auxiliary arrays
-     int *sgnlc,               // Candidate trigger parameters
-     FLOAT_TYPE *sgnlv,        // Candidate array
-     int *FNum)                // Candidate signal number
+               int pm,                   // Hemisphere
+               int mm,                   // Grid 'sky position'
+               int nn,                   // Second grid 'sky position'
+               Search_settings *sett,    // Search settings
+               Command_line_opts *opts,  // Search options
+               Search_range *s_range,    // Range for searching
+               FFTW_plans *plans,        // Plans for fftw
+               FFTW_arrays *fftw_arr,    // Arrays for fftw
+               Aux_arrays *aux,          // Auxiliary arrays
+               int *sgnlc,               // Candidate trigger parameters
+               FLOAT_TYPE *sgnlv,        // Candidate array
+               int *FNum)                // Candidate signal number
 {
      int i, j, n;
      int smin = s_range->sst, smax = s_range->spndr[1];

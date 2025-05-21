@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <getopt.h>
+//#include <getopt.h>
 #include <gsl/gsl_linalg.h>
 #include <time.h>
 #include <dirent.h>
@@ -25,12 +25,12 @@
 #define CODEVER unknown
 #endif
 
-
 Detector_settings ifo[MAX_DETECTORS];
 volatile sig_atomic_t save_state = 0;
 
 
-int main (int argc, char* argv[]) {
+int main (int argc, char* argv[])
+{
 
      Command_line_opts opts;
      Search_settings sett;
@@ -97,9 +97,10 @@ int main (int argc, char* argv[]) {
           // If addsig switch used, add signal from file,
           // search around this position (+- gsize)
           add_signal(&sett, &opts, &aux_arr, &s_range);
-     } else
-     // Set search range from range file
-     set_search_range(&sett, &opts, &s_range);
+     } else {
+          // Set search range from range file
+          set_search_range(&sett, &opts, &s_range);
+     }
 
      // FFT plans
      FFTW_plans fftw_plans;
@@ -113,19 +114,10 @@ int main (int argc, char* argv[]) {
      // main search job
      search(&sett, &opts, &s_range, &fftw_plans, &fftw_arr, &aux_arr, &Fnum);
 
-     // state file is emptied and closed in jobcore to mark successful end
-     // do not remove it here
-     /*
-     FILE *state;
-     if(opts.checkp_flag) {
-     remove(opts.qname);
-     }
-     */
-
      // Cleanup & memory free
      cleanup(&sett, &opts, &s_range, &fftw_plans, &fftw_arr, &aux_arr);
 
-     return 0;
+     return(EXIT_SUCCESS);
 
 }
 

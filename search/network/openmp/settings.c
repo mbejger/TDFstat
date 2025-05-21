@@ -15,11 +15,11 @@
  * FFT lenghts & other details, bandwidth and Earth parameters
  */
 
-void search_settings(Search_settings* sett) {
+void search_settings(Search_settings* sett)
+{
 
      double dt, B, oms, omr, Smin, Smax;
      int N, nfft, s, nd, interpftpad;
-
 
      dt = sett->dt;                    // data sampling time:
      B = 0.5/dt;                       // Bandwidth
@@ -104,7 +104,6 @@ void search_settings(Search_settings* sett) {
 } // search settings
 
 
-
 /* Network of detectors' discovery:
 * finds subdirectories in the main input directory,
 * which by convention should be named like V1, L1, H1
@@ -112,8 +111,7 @@ void search_settings(Search_settings* sett) {
 * writes appropriate detector-related data into structs.
 */
 
-void detectors_settings(Search_settings* sett,
-			         Command_line_opts *opts)
+void detectors_settings( Search_settings* sett, Command_line_opts *opts)
 {
 
      int i=0, j=0;
@@ -220,7 +218,8 @@ void detectors_settings(Search_settings* sett,
 * of the Virgo detector
 */
 
-void rogcvir(Detector_settings *ifo) {
+void rogcvir(Detector_settings *ifo)
+{
 
      /* In the notation of Phys. Rev. D 58, 063001 (1998):
      * ephi = lambda (geographical latitude phi in radians)
@@ -247,8 +246,8 @@ void rogcvir(Detector_settings *ifo) {
 /* Amplitude modulation of the signal
 */
 
-void modvir(double sinal, double cosal, double sindel, double cosdel,
-            int Np, Detector_settings *ifo, Aux_arrays *aux)
+void modvir( double sinal, double cosal, double sindel, double cosdel,
+             int Np, Detector_settings *ifo, Aux_arrays *aux)
 {
 
      int t;
@@ -290,7 +289,8 @@ void modvir(double sinal, double cosal, double sindel, double cosdel,
 } // modvir
 
 
-int read_lines( Search_settings *sett,	Command_line_opts *opts ){
+int read_lines( Search_settings *sett,	Command_line_opts *opts )
+{
 
      int i=0, lnum, j;
      char linefile[1200], line[512], *lfile;
@@ -324,11 +324,11 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
      dE = (double *)calloc(3*sett->N, sizeof(double));
      dtE = (double *)calloc(3*sett->N, sizeof(double));
 
-     for(int det=0; det < sett->nifo; det++) {
+     for (int det=0; det < sett->nifo; det++) {
 
           // First derivative DetSSB (velocity)
-          for(i=0; i<sett->N-1; i++) {
-               for(j=0; j<3; j++)
+          for (i=0; i<sett->N-1; i++) {
+               for (j=0; j<3; j++)
                     dE[i*3+j] = fabs(ifo[det].sig.DetSSB[(i+1)*3+j] -
                          ifo[det].sig.DetSSB[i*3+j]);
           }
@@ -336,14 +336,14 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
           double dEmax[3] = {0};
 
           // Find maximum absolute values
-          for(i=0; i<sett->N-1; i++) {
-               for(j=0; j<3; j++)
+          for (i=0; i<sett->N-1; i++) {
+               for (j=0; j<3; j++)
                     if(dE[i*3+j] > dEmax[j]) dEmax[j] = dE[i*3+j];
           }
 
           // First derivative
-          for(i=0; i<sett->N-1; i++) {
-               for(j=0; j<3; j++)
+          for (i=0; i<sett->N-1; i++) {
+               for (j=0; j<3; j++)
                     dtE[i*3+j] = fabs(ifo[det].sig.DetSSB[(i+1)*3+j]*(i+1) -
                          ifo[det].sig.DetSSB[i*3+j]*i)*sett->dt;
           }
@@ -351,14 +351,14 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
           double dtEmax[3] = {0};
 
           // Find maximum absolute values
-          for(i=0; i<sett->N-1; i++) {
+          for (i=0; i<sett->N-1; i++) {
                for(j=0; j<3; j++)
                     if(dtE[i*3+j] > dtEmax[j]) dtEmax[j] = dtE[i*3+j];
           }
 
           normdtEmax[det]=0.;
           normdEmax[det]=0.;
-          for(j=0; j<3; j++) {
+          for (j=0; j<3; j++) {
                normdtEmax[det] += pow(dtEmax[j], 2.);
                normdEmax[det]  += pow(dEmax[j], 2.);
           }
@@ -375,7 +375,7 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
      int iold = 0;
      i = 0; // veto line number (global for all veto files)
 
-     for(int det=0; det < sett->nifo; det++) {
+     for (int det=0; det < sett->nifo; det++) {
           // search for all veto files matching pattern <data>/lines/<det_name>lines*.csv
           sprintf(linefile, "%s/lines/%slines*.csv", opts->indir, ifo[det].name);
 
@@ -447,7 +447,7 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
      // Apply line widths
      //------------------
 
-     for(i=0; i<lnum; i++) {
+     for (i=0; i<lnum; i++) {
 
           int k;
 
@@ -477,7 +477,7 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
                // [offset+index*spacing-leftwidth, offset+index*spacing+rightwidth]
                case 1:
 
-               for(k=vline[i].iharm1; k<=vline[i].iharm2; k++) {
+               for (k=vline[i].iharm1; k<=vline[i].iharm2; k++) {
 
                     double linefreq = vline[i].offset + k*vline[i].f;
                     // Line width from the resampling broadening
@@ -502,7 +502,7 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
                // [offset+index*spacing-index*leftwidth, offset+index*spacing+index*rightwidth]
                case 2:
 
-               for(k=vline[i].iharm1; k<=vline[i].iharm2; k++) {
+               for (k=vline[i].iharm1; k<=vline[i].iharm2; k++) {
 
                     double linefreq = vline[i].offset + k*vline[i].f;
                     // Line width from the resampling broadening
@@ -536,7 +536,7 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
      }
 
      // scale veto lines to radians (narrowdown lines are already scaled)
-     for(i=sett->numlines_band; i<j; i++) {
+     for (i=sett->numlines_band; i<j; i++) {
           fl = sett->lines[i][0];
           fr = sett->lines[i][1];
           sett->lines[i][0] = (sett->lines[i][0] - sett->fpo)/(sett->B)*M_PI;
@@ -571,7 +571,8 @@ int read_lines( Search_settings *sett,	Command_line_opts *opts ){
 }
 
 
-int line_in_band(double* fl, double* fr, Search_settings* sett ) {
+int line_in_band(double* fl, double* fr, Search_settings* sett )
+{
 
      double bs, be;        // Band start and end
 
@@ -589,7 +590,8 @@ int line_in_band(double* fl, double* fr, Search_settings* sett ) {
 
 
 
-void narrow_down_band(Search_settings* sett, Command_line_opts *opts) {
+void narrow_down_band(Search_settings* sett, Command_line_opts *opts)
+{
 
      // Adding excluding ranges near the edges to the known lines list
      sett->lines[0][0] = 0;
@@ -604,7 +606,8 @@ void narrow_down_band(Search_settings* sett, Command_line_opts *opts) {
 }
 
 
-void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag) {
+void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag)
+{
 
      // lf - index of first line, le - index of last line
      int i;
@@ -613,7 +616,7 @@ void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag) {
      // Sorting veto lines in band (1st then 2nd column)
      qsort(&sett->lines[lf], le-lf, 2*sizeof(double), compared2c);
 
-     for(i=lf; i<le; i++) {
+     for (i=lf; i<le; i++) {
 
           // Looking for a gap between lines
           if(sett->lines[i][0] >= ll) {

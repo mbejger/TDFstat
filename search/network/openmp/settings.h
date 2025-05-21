@@ -39,26 +39,25 @@ void search_settings( Search_settings *sett );
 void detectors_settings( Search_settings *sett, Command_line_opts *opts );
 
 void rogcvir( Detector_settings *ifo );
-void modvir(
-     double sinal,
-     double cosal,
-     double sindel,
-     double cosdel,
-     int Np,
-     Detector_settings *ifo,
-     Aux_arrays *aux);
+void modvir( double sinal,
+             double cosal,
+             double sindel,
+             double cosdel,
+             int Np,
+             Detector_settings *ifo,
+             Aux_arrays *aux);
 
 int lineph( double, double *, double *, char *, char *, int );
 
 // Lines and excluded regions treatment
-void narrow_down_band( Search_settings* sett,  Command_line_opts *opts );
+void narrow_down_band( Search_settings* sett, Command_line_opts *opts );
 int read_lines( Search_settings *sett, Command_line_opts *opts );
 int line_in_band( double* fl, double* fr, Search_settings* sett );
 void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag);
 
 // Coincidences
 void read_trigger_files( Search_settings *sett,
-     Command_line_opts_coinc *opts,
-     Candidate_triggers *trig);
+                         Command_line_opts_coinc *opts,
+                         Candidate_triggers *trig);
 
 #endif

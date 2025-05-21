@@ -15,7 +15,8 @@ static int help_flag=0;
 double get_rand();
 Detector_settings ifo[MAX_DETECTORS];
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 
      int i, numl=0, freq_line_check, c, pm, gsize=2, band=0, reffr, nfrinband;
      char filename[512], dtaprefix[512], *wd=NULL ;
@@ -153,7 +154,6 @@ int main(int argc, char *argv[]) {
           exit(EXIT_FAILURE);
      }
 
-
      if (wd) {
           printf ("Changing working directory to %s\n", wd);
           if (chdir(wd)) {
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
           sett.fpo = fpo_val;
           else
           if (band > 0 && overlap >=0.) {
-               sett.fpo = 10. + (1.-overlap)*band*(0.5/sett.dt);
+               sett.fpo = 10. + (1. - overlap)*band*(0.5/sett.dt);
           } else {
                printf("Band AND overlap or fpo must be specified!\n");
                exit(EXIT_FAILURE);
@@ -289,7 +289,7 @@ int main(int argc, char *argv[]) {
      iota, ph_o, psik, hop, hoc) ;
      */
 
-     return 0;
+     return(EXIT_SUCCESS);
 
 } // sigen()
 
