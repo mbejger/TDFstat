@@ -49,7 +49,25 @@ int main (int argc, char* argv[]) {
 
   // Command line options 
   read_ini_file(&sett, &opts, argc, argv);    
-	
+
+  // Directed search check 
+  if (strlen(opts.ra) > 0 && strlen(opts.dec) > 0) {
+    opts.is_directed = 1; 
+
+    fprintf(stderr, "\nRA and DEC are both specified in the ini file - this is now a directed search.\n");
+    opts.ra_val = atof(opts.ra);
+    opts.dec_val = atof(opts.dec);
+
+  } else { 
+    opts.is_directed = 0; 
+  } 
+
+  // testing printout 
+  if (opts.is_directed) {
+    printf("%lf %lf\n", opts.ra_val, opts.dec_val);
+  }  
+  exit(0);
+
   // Output data handling
   struct stat buffer;
 

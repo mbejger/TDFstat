@@ -89,6 +89,12 @@ void read_ini_file( Search_settings *sett,
   // currently only NULL and old blocks_avg are implemented
   opts->fstat_norm = iniparser_getstring(ini, "search:fstat_norm", NULL);
 
+  // directed search options
+  // right ascension 
+  opts->ra = iniparser_getstring(ini, "search:ra", ""); // right ascension in radians [0, 2*PI]
+  // declination
+  opts->dec = iniparser_getstring(ini, "search:dec", ""); // declination in radians [-PI/2, PI/2]
+
   //   FLAGS
   // [0, 1] (in future other values can select different subsets of lines
   opts->veto_flag = iniparser_getint(ini, "search:veto_flag", 0);
@@ -130,290 +136,6 @@ void read_ini_file( Search_settings *sett,
   sett->fpo = 10. + (1. - opts->overlap)*opts->band*(0.5/sett->dt);
   
 }
-
-
-
-/*  Command line options handling: search  */ 
-
-/*
-void handle_opts( Search_settings *sett, 
-		  Command_line_opts *opts,
-		  int argc, 
-		  char* argv[]) {
-	
-  opts->hemi=0;
-  opts->wd=NULL;
-
-  // Default F-statistic threshold 
-  opts->trl=20;
-
-  strcpy (opts->prefix, TOSTR(PREFIX));
-  strcpy (opts->dtaprefix, TOSTR(DTAPREFIX));
-
-  opts->label[0]    = '\0';
-  opts->range[0]    = '\0';
-  opts->getrange[0] = '\0';
-  opts->usedet[0]   = '\0';
-  opts->addsig[0]   = '\0';
-	
-  // Initial value of starting frequency set to a negative quantity. 
-  // If this is not changed by the command line value, fpo is calculated 
-  // from the band number b (fpo = fpo = fstart + 0.96875*b/(2dt))
-  sett->fpo = -1;
-
-  // Default initial value of the data sampling time 
-  sett->dt = 0.5;
-
-  // Default value of the narrow-down parameter 
-  opts->narrowdown=0.5;
-
-  // Initial value of the number of days is set to 0
-  sett->nod = 0; 
-
-  opts->help_flag=0;
-  opts->white_flag=0;
-  opts->s0_flag=0;
-  opts->checkp_flag=0;
-  opts->veto_flag=0; 
-  opts->overlap=-1.;
-  opts->gen_vlines_flag=0;
-  
-  static int help_flag=0, white_flag=0, s0_flag=0, 
-             checkp_flag=1, veto_flag=0, gen_vlines_flag=0;
-
-  // Reading arguments 
-
-  while (1) {
-    static struct option long_options[] = {
-      {"help", no_argument, &help_flag, 1},
-      {"whitenoise", no_argument, &white_flag, 1},
-      {"nospindown", no_argument, &s0_flag, 1},
-      {"nocheckpoint", no_argument, &checkp_flag, 0},
-      {"vetolines", no_argument, &veto_flag, 1},
-      {"genvlines", no_argument, &gen_vlines_flag, 1},
-      // frame number
-      {"ident", required_argument, 0, 'i'},
-      // frequency band number
-      {"band", required_argument, 0, 'b'},
-      // output directory
-      {"output", required_argument, 0, 'o'},
-      // input data directory
-      {"data", required_argument, 0, 'd'},
-      // non-standard label for naming files
-      {"label", required_argument, 0, 'l'},
-      // narrower grid range parameter file
-      {"range", required_argument, 0, 'r'},
-      // write full grid range to file
-      {"getrange", required_argument, 0, 'g'},
-      // change directory parameter
-      {"cwd", required_argument, 0, 'c'},
-      // threshold for the F-statistic
-      {"threshold", required_argument, 0, 't'},
-      // hemisphere
-      {"hemisphere", required_argument, 0, 'h'},
-      // fpo value
-      {"fpo", required_argument, 0, 'p'},
-      // add signal parameters
-      {"addsig", required_argument, 0, 'x'},
-      // number of days in the time-domain segment
-      {"nod", required_argument, 0, 'y'},
-      // data sampling time 
-      {"usedet", required_argument, 0, 'u'}, 
-      // data sampling time 
-      {"dt", required_argument, 0, 's'},
-      // Narrow down the frequency band (+- the center of band) 
-      {"narrowdown", required_argument, 0, 'n'},
-      // band overlap
-      {"overlap", required_argument, 0, 'v'},
-      {0, 0, 0, 0}
-    };
-
-    if (help_flag) {
-
-      printf("polgraw-allsky periodic GWs: search for candidate signals with the F-statistic\n");
-      printf("Usage: ./search -[switch1] <value1> -[switch2] <value2> ...\n") ;
-      printf("Switches are:\n\n");
-      printf("-data         Data directory (default is .)\n");
-      printf("-output       Output directory (default is ./candidates)\n");
-      printf("-ident        Frame number\n");
-      printf("-band         Band number\n");
-      printf("-label        Custom label for the input and output files\n");
-      printf("-range        Use file with grid range or pulsar position\n");
-      printf("-getrange     Write grid ranges & save fft wisdom & exit (ignore -r)\n");
-      printf("-cwd          Change to directory <dir>\n");
-      printf("-threshold    Threshold for the F-statistic (default is 20)\n");
-      printf("-hemisphere   Hemisphere (default is 0 - does both)\n");
-      printf("-fpo          Reference band frequency fpo value\n");
-      printf("-dt           Data sampling time dt (default value: 0.5)\n");
-      printf("-usedet       Use only detectors from string (default is use all available)\n");
-      printf("-addsig       Add signal with parameters from <file>\n");
-      printf("-nod          Number of days\n");
-      printf("-narrowdown   Narrow-down the frequency band (range [0, 0.5] +- around center)\n");
-      printf("-overlap      Band overlap, fpo=10+(1-overlap)*band/(dt*2) ; obligatory if band is used\n\n");
-
-
-      printf("Also:\n\n");
-      printf("--whitenoise      White Gaussian noise assumed\n");
-      printf("--nospindown      Spindowns neglected\n");
-      printf("--nocheckpoint    State file won't be created (no checkpointing)\n");
-      printf("--vetolines       Veto known lines from files in data directory\n");
-      printf("--genvlines       Generate .vlines file and exit\n");
-      printf("--help            This help\n");
-
-      exit(EXIT_SUCCESS);
-    }
-
-    int option_index = 0;
-    int c = getopt_long_only(argc, argv, "i:b:o:d:l:r:g:c:t:h:p:x:y:s:u:n:v:",
-			     long_options, &option_index);
-    if (c == -1)
-      break;
-
-    switch (c) {
-    case 'i':
-      opts->ident = atoi (optarg);
-      break;
-    case 't':
-      opts->trl = atof(optarg);
-      break;
-    case 'h':
-      opts->hemi = atof(optarg);
-      break;
-    case 'b':
-      opts->band = atoi(optarg);
-      break;
-    case 'o':
-      strcpy(opts->prefix, optarg);
-      break;
-    case 'd':
-      strcpy(opts->dtaprefix, optarg);
-      break;
-    case 'l':
-      opts->label[0] = '_';
-      strcpy(1+opts->label, optarg);
-      break;
-    case 'r':
-      strcpy(opts->range, optarg);
-      break;
-    case 'g':
-      strcpy(opts->getrange, optarg);
-      break;
-    case 'c':
-      opts->wd = (char *) malloc (1+strlen(optarg));
-      strcpy(opts->wd, optarg);
-      break;
-    case 'p':
-      sett->fpo = atof(optarg);
-      break;
-    case 'x':
-      strcpy(opts->addsig, optarg);
-      break;
-    case 'y':
-      sett->nod = atoi(optarg);
-      break;
-    case 's':
-      sett->dt = atof(optarg);
-      break;
-    case 'u':
-      strcpy(opts->usedet, optarg);
-      break;
-    case 'n':
-      opts->narrowdown = atof(optarg);
-      break;
-    case 'v':
-      opts->overlap = atof(optarg);
-      break;
-    case '?':
-      break;
-    default:
-      break ;
-    } // switch c
-  } // while 1 
-
-  // Check if sett->nod was set up, if not, exit
-  if(!(sett->nod)) {
-    printf("Number of days not set... Exiting\n");
-    exit(EXIT_FAILURE);
-  }
-
-  printf("Number of days is %d\n", sett->nod); 
-  
-  // Putting the parameter in triggers' frequency range [0, pi] 
-  opts->narrowdown *= M_PI; 
-
-  opts->white_flag = white_flag;
-  opts->s0_flag = s0_flag;
-  opts->checkp_flag = checkp_flag;
-  opts->veto_flag = veto_flag; 
-  opts->gen_vlines_flag = gen_vlines_flag;
-
-  printf("Input data directory is %s\n", opts->dtaprefix);
-  printf("Output directory is %s\n", opts->prefix);
-  printf("Frame and band numbers are %d and %d\n", opts->ident, opts->band);
-
-  // Starting band frequency:
-  // fpo_val is optionally read from the command line
-  // Its initial value is set to -1
-
-  if (!(sett->fpo >= 0)) {
-
-       // The usual definition (multiplying the offset by B=1/(2dt))
-       // old: sett->fpo = 10. + 0.96875*opts->band*(0.5/sett->dt);
-
-       if (opts->band > 0 && opts->overlap >=0.) {
-	    sett->fpo = 10. + (1. - opts->overlap)*opts->band*(0.5/sett->dt);
-       } else {
-	    printf("Band AND overlap or fpo must be specified!\n");
-	    exit(EXIT_FAILURE);
-       }
-  }
-
-  printf("The reference frequency fpo is %f\n", sett->fpo);
-  printf("The data sampling time dt is %f\n", sett->dt); 
-
-  if (opts->white_flag)
-    printf ("Assuming white Gaussian noise\n");
-
-  // For legacy: FFT is now the only option 
-  printf ("Using fftinterp=FFT (FFT interpolation by zero-padding)\n");
-
-  if(opts->trl!=20)
-    printf ("Threshold for the F-statistic is %lf\n", opts->trl);
-  if(opts->hemi)
-    printf ("Search for hemisphere %d\n", opts->hemi);
-  if(opts->s0_flag)
-    printf ("Assuming s_1 = 0.\n");
-  if(strlen(opts->label))
-    printf ("Using '%s' as data label\n", opts->label);
-
-  if(strlen(opts->getrange)){
-    printf ("Writing full grid ranges to '%s'\n", opts->getrange);
-    if(strlen(opts->range)) {
-      opts->range[0] = '\0';
-      printf ("     WARNING! -r option will be ignored...\n");
-    }
-  }
-
-  if (strlen(opts->range))
-    printf ("Obtaining grid range from '%s'\n", opts->range);
-
-  if (strlen(opts->addsig))
-    printf ("Adding signal from '%s'\n", opts->addsig);
-  if (opts->wd) {
-    printf ("Changing working directory to %s\n", opts->wd);
-    if (chdir(opts->wd)) { perror (opts->wd); abort (); }
-  }
-
-  //if(opts->veto_flag) 
-  //  printf("Known lines will be vetoed (reading from files in the data directory)\n");
-
-} // end of command line options handling 
-
-
-*/
-
-
-
 
 
 /* Generate grid from the M matrix (grid.bin) */ 
@@ -604,6 +326,13 @@ void init_arrays(
   
 } // end of init arrays 
 
+void grid_sky_position(
+		Search_settings *sett,
+		Command_line_opts *opts) { 
+
+
+} 
+	
 
   /* Add signal to data   */ 
 
@@ -862,6 +591,8 @@ void sda_to_grid(Search_settings *sett,
   free (MM);
 
 } 
+
+
 
 
 /* Search range */ 

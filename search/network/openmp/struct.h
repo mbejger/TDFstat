@@ -35,6 +35,11 @@ typedef struct _comm_line_opts {
 
   char state_file[FNAME_LENGTH];
 
+  // directed search options
+  const char *ra, *dec; 
+  double ra_val, dec_val; // Right ascension and declination in radians 
+  int is_directed; 
+ 
 } Command_line_opts;
 
 
