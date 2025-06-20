@@ -54,19 +54,15 @@ int main (int argc, char* argv[]) {
   if (strlen(opts.ra) > 0 && strlen(opts.dec) > 0) {
     opts.is_directed = 1; 
 
-    fprintf(stderr, "\nRA and DEC are both specified in the ini file - this is now a directed search.\n");
-    opts.ra_val = atof(opts.ra);
     opts.dec_val = atof(opts.dec);
+    opts.ra_val = atof(opts.ra);
+
+    fprintf(stderr, "DEC and RA are both specified in the ini file. Performing a directed search with\n");
+    fprintf(stderr, "DEC: %lf, RA: %lf \n", opts.dec_val, opts.ra_val);
 
   } else { 
     opts.is_directed = 0; 
   } 
-
-  // testing printout 
-  if (opts.is_directed) {
-    printf("%lf %lf\n", opts.ra_val, opts.dec_val);
-  }  
-  exit(0);
 
   // Output data handling
   struct stat buffer;
@@ -93,6 +89,31 @@ int main (int argc, char* argv[]) {
 
   // Search settings
   search_settings(&sett); 
+
+  if (opts.is_directed) {
+    
+    double be[2]; 
+    int hemisphere; 
+
+    hemisphere = ast2lin(opts.ra_val, opts.dec_val, C_EPSMA, be);
+ 
+    printf("Hemisphere: %d, be[0]: %lf, be[1]: %lf\n", hemisphere, be[0], be[1]);
+
+    //be = al/sett->oms;
+
+    double D, nn, mm, al1, al2;
+    al1 = be[0]*sett.oms;
+    al2 = be[1]*sett.oms;
+
+    D = sett.M[10]*sett.M[15] - sett.M[11]*sett.M[14];
+    nn = (al1*sett.M[15] - al2*sett.M[14])/D; 
+    mm = (al2*sett.M[10] - al1*sett.M[11])/D;
+
+    printf("nn: %lf, mm: %lf\n", nn, mm);
+
+    exit(0);
+  } 
+  
 
   // Array initialization, reading in the input data and the ephemerids 
   init_arrays(&sett, &opts, &aux_arr);
