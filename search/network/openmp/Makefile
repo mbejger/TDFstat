@@ -50,7 +50,7 @@ CC = gcc -std=gnu11 -static-libgcc -fopenmp #-flto
 CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=3 -D$(SINCOS) -UUSE_LOCKING  -DCOMP_${PREC} ${VCFLAGS} #-DVERBOSE 
 CFLAGS += -I$(FFTW_DIR)/include -I$(INIPARSER_DIR)/src
 CFLAGS += -g -Wall -Wno-unused \
-	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops \
+	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops -march=x86-64 -mtune=generic # \
 	  -march=$(ARCH) -mtune=$(ARCH)
 
 
