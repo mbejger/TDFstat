@@ -207,8 +207,9 @@ void init_arrays(
 
     ifo[i].sig.xDat = (double *) calloc(sett->N, sizeof(double));
     
-    // Extra array in case of software injections (to keep the original contents) 
-    ifo[i].sig.xDatorig = (double *) calloc(sett->N, sizeof(double));
+    // Extra array in case of software injections (to keep the original contents)
+    //#mb  
+    //ifo[i].sig.xDatorig = (double *) calloc(sett->N, sizeof(double));
     
     // Input time-domain data handling
     // 
@@ -226,8 +227,9 @@ void init_arrays(
       exit(EXIT_FAILURE); 
     }
     
+    //#mb
     // Copy ifo[i].sig.xDat to ifo[i].sig.xDatorig for safekeeping 
-    memcpy(ifo[i].sig.xDatorig, ifo[i].sig.xDat, sett->N*sizeof(double));
+    //memcpy(ifo[i].sig.xDatorig, ifo[i].sig.xDat, sett->N*sizeof(double));
 
     int j, Nzeros=0;
     // Checking for null values in the data
@@ -543,9 +545,8 @@ void add_signal(
       // Adding the signal to the data vector 
       if(ifo[n].sig.xDat[i]) { 
 //#mb 
-        ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
-//        ifo[n].sig.xDat[i] = h0*signadd[n][i];
-
+//        ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
+        ifo[n].sig.xDat[i] += h0*signadd[n][i];
 
       } 
 
@@ -919,7 +920,7 @@ void cleanup(
 
   for(i=0; i<sett->nifo; i++) {
     free(ifo[i].sig.xDat);
-    free(ifo[i].sig.xDatorig); 
+//#mb    free(ifo[i].sig.xDatorig); 
     free(ifo[i].sig.xDatma);
     free(ifo[i].sig.xDatmb);
     free(ifo[i].sig.DetSSB);
