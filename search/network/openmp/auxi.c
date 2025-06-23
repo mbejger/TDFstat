@@ -224,7 +224,7 @@ double var (double *x, int n) {
 
 
 
-void gridr (double *M, int *spndr, int *nr, int *mr, double oms, double Smax) {
+void gridr (double *M, float *spndr, float *nr, float *mr, double oms, double Smax) {
 
   double cof, Mp[16], smx[64], d, Ob;
   int i, j, indx[4];

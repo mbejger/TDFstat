@@ -80,11 +80,11 @@ typedef struct _fftw_arrays {
   /* Search range  */ 
 
 typedef struct _search_range {
-  int pmr[2], mr[2], nr[2], spndr[2], fr[2];
-
+  float pmr[2], mr[2], nr[2], spndr[2], fr[2];
+  
   // in case of signal injection, +- gside in each f-s-d-a direction 
   int gsize_f, gsize_s, gsize_m, gsize_n;  
-  int pst, mst, nst, sst, fst; //#mb redundant? 
+  int pst, mst, nst, sst, fst; 
 
   // Injection frequency in bandwidth units (0, 2\pi)
   float freq_inj; 

@@ -242,7 +242,6 @@ void init_arrays(
     ifo[i].sig.crf0 = (double)sett->N/(sett->N - ifo[i].sig.Nzeros);
 
     // Estimation of the variance for each detector 
-    //#mb for signal-only cases (tests) 
     ifo[i].sig.sig2 = (ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
 
     ifo[i].sig.DetSSB = (double *) calloc(3*sett->N, sizeof(double));
@@ -380,6 +379,9 @@ void add_signal(
       exit(0); 
     } 
 
+  printf("add_signal(): signal parameters: f=%le, s=%le, d=%le, a=%le, ph_o=%le, psik=%le, iota=%le\n", 
+    sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3], sgnlo[4], sgnlo[5], sgnlo[6]);
+
   // Search-specific parametrization of freq. for software injections
   // i.e. shifting the freq. to current time segment 
   // sgnlo[0]: frequency, sgnlo[1]: frequency. derivative  
@@ -393,8 +395,6 @@ void add_signal(
 
   // Saving the injection frequency in s_range struct 
   s_range->freq_inj = sgnlo[0];
-
-  //#mb explanation of what is going on below  
 
   cof = sett->oms + sgnlo[0]; 
   
@@ -411,8 +411,7 @@ void add_signal(
   // into the grid coordinates 
   // Writes to: s_range->spndr[0], s_range->nr[0], s_range->mr[0]
   sda_to_grid(sett, s_range, sgnlol); 
-
-   
+ 
   //#mb start 
   //
   // Grid positions
@@ -429,9 +428,9 @@ void add_signal(
   sgnlo[2] = asin(sindelt);
   sgnlo[3] = fmod(atan2(sinalt, cosalt) + 2.*M_PI, 2.*M_PI);
 
-  printf("Grid sky positions: %le %le\n", sgnlo[2], sgnlo[3]); 
+  printf("Nearest grid point sky positions: DEC %lf, RA %lf\n", sgnlo[2], sgnlo[3]); 
 
-  /* 
+  /*  
   // Calculate the hemisphere and be vector 
   s_range->pmr[0] = ast2lin(sgnlo[3], sgnlo[2], C_EPSMA, be);
 
@@ -457,15 +456,14 @@ void add_signal(
   // This variable sets the hemisphere number 
   s_range->pmr[1] = s_range->pmr[0];  
 
-  //#mb starting values for the loops for spindown, sky and hemispheres 
-  //redundant?  
+  // starting values for the loops for spindown, sky and hemispheres 
   s_range->sst = s_range->spndr[0];
   s_range->nst = s_range->nr[0];
   s_range->mst = s_range->mr[0];
   s_range->pst = s_range->pmr[0];
 
   printf("add_signal(): following grid range is used (spndr, nr, mr, pmr pairs)\n");
-  printf("%d %d %d %d %d %d %d %d\n", \
+  printf("%f %f %f %f %f %f %f %f\n", \
    s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
    s_range->mr[0], s_range->mr[1], s_range->pmr[0], s_range->pmr[1]);
 
@@ -583,9 +581,9 @@ void sda_to_grid(Search_settings *sett,
   gsl_linalg_LU_decomp (&m.matrix, p, &s);
   gsl_linalg_LU_solve (&m.matrix, p, &b.vector, x);
   
-  s_range->spndr[0] = round(gsl_vector_get(x,1)); 
-  s_range->nr[0]    = round(gsl_vector_get(x,2));
-  s_range->mr[0]    = round(gsl_vector_get(x,3));
+  s_range->spndr[0] = gsl_vector_get(x,1); 
+  s_range->nr[0]    = gsl_vector_get(x,2);
+  s_range->mr[0]    = gsl_vector_get(x,3);
   
   gsl_permutation_free (p);
   gsl_vector_free (x);
@@ -621,7 +619,7 @@ void set_search_range(
 
     if ((data = fopen(opts->range_file, "r")) != NULL) {
 
-      int aqq = fscanf(data, "%d %d %d %d %d %d %d %d",
+      int aqq = fscanf(data, "%f %f %f %f %f %f %f %f",
 		       s_range->spndr, 1+s_range->spndr, 
 		       s_range->nr, 1+s_range->nr, 
 		       s_range->mr, 1+s_range->mr,
@@ -740,7 +738,7 @@ void set_search_range(
 
       FILE *data;
       if ((data=fopen (opts->dump_range_file, "w")) != NULL) {
-	fprintf(data, "%d %d\n%d %d\n%d %d\n%d %d\n",
+	fprintf(data, "%f %f\n%f %f\n%f %f\n%f %f\n",
 		s_range->spndr[0], s_range->spndr[1],
 		s_range->nr[0], s_range->nr[1],
 		s_range->mr[0], s_range->mr[1],
@@ -761,7 +759,7 @@ void set_search_range(
   }
 
   printf("set_search_range() - the grid ranges are maximally this:\n"); 
-  printf("(spndr, nr, mr, pmr pairs): %d %d %d %d %d %d %d %d\n",
+  printf("(spndr, nr, mr, pmr pairs): %f %f %f %f %f %f %f %f\n",
 	 s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
 	 s_range->mr[0], s_range->mr[1], s_range->pmr[0], s_range->pmr[1]);
 
