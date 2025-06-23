@@ -36,7 +36,8 @@ void search(
 
   struct flock lck;
   
-  int pm, mm, nn;       // hemisphere, sky positions 
+  int pm;               // hemisphere   
+  float mm=0, nn=0;         // sky positions 
   int sgnlc=0;          // number of candidates
   FLOAT_TYPE *sgnlv;    // array with candidates data
   long totsgnl;         // total number of candidates
@@ -64,7 +65,29 @@ void search(
 	    s_range->nst, s_range->sst, *FNum);
     fseek(state, 0, SEEK_SET);
   }
-  
+ 
+  if (opts->is_directed) { 
+
+    double be[2]; 
+
+    pm = ast2lin(opts->ra_val, opts->dec_val, C_EPSMA, be); 
+    s_range->pst = pm; 
+    s_range->pmr[1] = pm; 
+
+    //be = al/sett->oms;
+
+    double D, al1, al2;
+    al1 = be[0]*sett->oms;
+    al2 = be[1]*sett->oms;
+
+    D = sett->M[10]*sett->M[15] - sett->M[11]*sett->M[14];
+    nn = (al1*sett->M[15] - al2*sett->M[14])/D; 
+    mm = (al2*sett->M[10] - al1*sett->M[11])/D;
+
+    printf("Hemisphere: %d, nn: %lf, mm: %lf\n", pm, nn, mm);
+
+  } 
+
   /* Loop over hemispheres */ 
   
   for (pm=s_range->pst; pm<=s_range->pmr[1]; ++pm) {
@@ -77,10 +100,10 @@ void search(
     totsgnl = 0;
     
     /* Two main loops over sky positions */ 
-    
-    for (mm=s_range->mst; mm<=s_range->mr[1]; ++mm) {	
-      for (nn=s_range->nst; nn<=s_range->nr[1]; ++nn) {	
-	
+   
+//    for (mm=s_range->mst; mm<=s_range->mr[1]; ++mm) {	
+//      for (nn=s_range->nst; nn<=s_range->nr[1]; ++nn) {	
+
 	/* Loop over spindowns is inside job_core() */
 	status = job_core(
 			  pm,           // hemisphere
@@ -121,7 +144,7 @@ void search(
 	     
 	     if(opts->checkp_flag) {
 	       status = ftruncate(fileno(state), 0);
-	       fprintf(state, "%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
+	       fprintf(state, "%d %f %f %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
 	       fseek(state, 0, SEEK_SET);
 	       if (save_state == 1) {
 		 //printf("%d %d %d %d %d\n", pm, mm, nn+1, s_range->sst, *FNum);
@@ -132,10 +155,11 @@ void search(
 	     save_state = 0;
 	     
 	} /* if sgnlc > sett-nfft */
-      } // for nn
-      s_range->nst = s_range->nr[0];
-    } // for mm
-    s_range->mst = s_range->mr[0]; 
+
+//      } // for nn
+//      s_range->nst = s_range->nr[0];
+//    } // for mm
+//    s_range->mst = s_range->mr[0]; 
 
     // Write the leftover from the last iteration of the buffer 
     if((fd = open(outname, tmode, S_IRUSR|S_IWUSR|S_IRGRP)) < 0) {
@@ -182,8 +206,8 @@ void search(
   /* Main job */ 
 
 int job_core(int pm,             // Hemisphere
-	     int mm,                   // Grid 'sky position'
-	     int nn,                   // Second grid 'sky position'
+	     float mm,                 // Grid 'sky position'
+	     float nn,                 // Second grid 'sky position'
 	     Search_settings *sett,    // Search settings
 	     Command_line_opts *opts,  // Search options 
 	     Search_range *s_range,    // Range for searching
@@ -252,8 +276,11 @@ int job_core(int pm,             // Hemisphere
 
   // calculate declination and right ascention
   // written in file as candidate signal sky positions
+
   sgnlt[2] = asin(sindelt);
   sgnlt[3] = fmod(atan2(sinalt, cosalt) + 2.*M_PI, 2.*M_PI);
+
+  printf("Dec and Ra from inside the jobcore: %lf %lf\n", sgnlt[2], sgnlt[3]);  
 
   het0 = fmod(nn*sett->M[8] + mm*sett->M[12], sett->M[0]);
 
@@ -409,7 +436,7 @@ int job_core(int pm,             // Hemisphere
 
   
   const int s_stride = 1;
-  printf ("\n>>%d\t%d\t%d\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
+  printf ("\n>>%d\t%f\t%f\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
 
   static FFTW_PRE(_complex) *fxa, *fxb;
   fxa = fftw_arr->fxa;
@@ -589,7 +616,7 @@ int job_core(int pm,             // Hemisphere
       (*sgnlc)++;
       
 #ifdef VERBOSE
-      printf ("\nSignal %d: %d %d %d %d %d snr=%.2f\n", 
+      printf ("\nSignal %d: %d %f %f %d %d snr=%.2f\n", 
         *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
 #endif
     }
