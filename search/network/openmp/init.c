@@ -242,7 +242,7 @@ void init_arrays(
     ifo[i].sig.crf0 = (double)sett->N/(sett->N - ifo[i].sig.Nzeros);
 
     // Estimation of the variance for each detector 
-    ifo[i].sig.sig2 = (ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
+    ifo[i].sig.sig2 = 1; //(ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
 
     ifo[i].sig.DetSSB = (double *) calloc(3*sett->N, sizeof(double));
     /* 
@@ -562,6 +562,201 @@ void add_signal(
 } // add_signal()
 
 
+  /* Add signal to data - directed search version  */ 
+
+void add_signal_drsearch(
+		Search_settings *sett,
+		Command_line_opts *opts,
+		Aux_arrays *aux_arr,
+		Search_range *s_range, 
+    char *line) {
+
+  int i, j, n, reffr; 
+  double snr=0, sum = 0., h0=0, cof, d1; 
+  double sigma_noise = 1.0;
+  double be[2];
+  double al1, al2, sinalt, cosalt, sindelt, cosdelt, phaseadd, shiftadd;
+  double ph_o, psik, hoc, hop, iota, intrang[3]; 
+  double nSource[3], sgnlo[7], sgnlol[4];
+ 
+  char amporsnr[4];  
+
+  do { 
+    sscanf (line, "%s", amporsnr);
+  } while ( strcmp(amporsnr, "amp")!=0 && strcmp(amporsnr, "snr")!=0 );
+
+
+  /* check if signal file contains information on GW amplitude or SNR
+    other parameters are grid ranges in f, s d and a, the reference segment number 
+    frequency: sgnlo[0], spindown: sgnlo[1], declination: sgnlo[2], right ascension: sgnlo[3], 
+    sgnlo[4]-sgnlo[6]: 3 variables related to orientation of the source (see sigen.c)
+  */
+  if(!strcmp(amporsnr, "amp")) { 
+      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le", 
+        &h0, &s_range->gsize_f, &s_range->gsize_s, &s_range->gsize_m, &s_range->gsize_n, &reffr, 
+        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6); 
+      printf("add_signal(): GW amplitude h0 is %le\n", h0); 
+    } else if(!strcmp(amporsnr, "snr")) { 
+      sscanf (&line[3], "%le %d %d %d %d %d %le %le %le %le %le %le %le", 
+        &snr, &s_range->gsize_f, &s_range->gsize_s, &s_range->gsize_m, &s_range->gsize_n, &reffr, 
+        sgnlo, sgnlo+1, sgnlo+2, sgnlo+3, sgnlo+4, sgnlo+5, sgnlo+6);  
+      printf("add_signal(): GW (network) signal-to-noise ratio is %le\n", snr); 
+    } else { 
+      printf("Problem with the signal parameters (neither amp nor snr). Exiting...\n"); 
+      exit(0); 
+    } 
+
+  printf("add_signal(): signal parameters: f=%le, s=%le, d=%le, a=%le, ph_o=%le, psik=%le, iota=%le\n", 
+    sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3], sgnlo[4], sgnlo[5], sgnlo[6]);
+
+  // Search-specific parametrization of freq. for software injections
+  // i.e. shifting the freq. to current time segment 
+  // sgnlo[0]: frequency, sgnlo[1]: frequency. derivative  
+  sgnlo[0] += -2.*sgnlo[1]*(sett->N)*(reffr - opts->seg); 
+
+  // Check if the signal is in band 
+  if( sgnlo[0]<0 || sgnlo[0]>M_PI ) {
+      printf("add_signal(): signal out of band f=%le s=%le\n", sgnlo[0], sgnlo[1]);
+      return;
+  }
+
+  // Saving the injection frequency in s_range struct 
+  s_range->freq_inj = sgnlo[0];
+
+  cof = sett->oms + sgnlo[0]; 
+  
+  for(i=0; i<2; i++) sgnlol[i] = sgnlo[i]; 
+  
+  // Calculate the hemisphere and be[] vector 
+  // be[] vector is used below to calculate the nearest grid point
+  // to guide the search in spindown and sky positions
+  s_range->pmr[0] = ast2lin(sgnlo[3], sgnlo[2], C_EPSMA, be);
+	 	
+  sgnlol[2] = be[0]*cof;
+  sgnlol[3] = be[1]*cof;
+
+  // solving a linear system in order to translate 
+  // spindown and sky positions (sgnlo parameters) 
+  // into the grid coordinates 
+  // Writes to: s_range->spndr[0], s_range->nr[0], s_range->mr[0]
+  sda_to_grid(sett, s_range, sgnlol); 
+
+  // Define the grid ranges in which the signal will be looked for
+  // +- grid ranges in each direction are defined by gsize_X
+  s_range->spndr[1] = s_range->spndr[0] + s_range->gsize_s;
+  s_range->spndr[0] -= s_range->gsize_s;
+//  s_range->nr[1] = s_range->nr[0] + s_range->gsize_n; 
+//  s_range->nr[0] -= s_range->gsize_n;
+//  s_range->mr[1] = s_range->mr[0] + s_range->gsize_m; 
+//  s_range->mr[0] -= s_range->gsize_m;
+  // This variable sets the hemisphere number 
+  s_range->pmr[1] = s_range->pmr[0];  
+
+  // starting values for the loops for spindown, sky and hemispheres 
+  s_range->sst = s_range->spndr[0];
+//  s_range->nst = s_range->nr[0];
+//  s_range->mst = s_range->mr[0];
+  s_range->pst = s_range->pmr[0];
+
+  printf("add_signal(): following grid range is used (spndr, nr, mr, pmr pairs)\n");
+  printf("%f %f %f %f %f %f %f %f\n", \
+   s_range->spndr[0], s_range->spndr[1], s_range->nr[0], s_range->nr[1],
+   s_range->mr[0], s_range->mr[1], s_range->pmr[0], s_range->pmr[1]);
+
+  // sgnlo[2]: declination, sgnlo[3]: right ascension 
+  sindelt = sin(sgnlo[2]); 
+  cosdelt = cos(sgnlo[2]); 
+  sinalt = sin(sgnlo[3]);  
+  cosalt = cos(sgnlo[3]); 
+
+  // Intrinsic parameters of the signal: phase, polarization, inclination wobble angle iota 
+  ph_o = sgnlo[4];    
+  psik = sgnlo[5];    
+  hoc =  cos(sgnlo[6]); // sgnlo[6] = iota = acos(hoc)   
+  hop = (1. + hoc*hoc)/2.; 
+
+  intrang[0] =  cos(2.*psik)*hop*cos(ph_o) - sin(2.*psik)*hoc*sin(ph_o) ;
+  intrang[1] =  sin(2.*psik)*hop*cos(ph_o) + cos(2.*psik)*hoc*sin(ph_o) ;
+  intrang[2] = -cos(2.*psik)*hop*sin(ph_o) - sin(2.*psik)*hoc*cos(ph_o) ;
+  intrang[3] = -sin(2.*psik)*hop*sin(ph_o) + cos(2.*psik)*hoc*cos(ph_o) ;
+
+  // To keep coherent phase between time segments  
+  double phaseshift = sgnlo[0]*sett->N*(reffr - opts->seg)   
+    + sgnlo[1]*pow(sett->N*(reffr - opts->seg), 2); 
+
+  // Allocate arrays for added signal, for each detector 
+  double **signadd = malloc((sett->nifo)*sizeof(double *));
+  for(n=0; n<sett->nifo; n++)
+    signadd[n] = malloc((sett->N)*sizeof(double));
+
+  printf("%s %.8le %.8le %.8le %.8le %.8le %.8le %.8le\n", 
+    opts->si_label, sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3], sgnlo[4], sgnlo[5], sgnlo[6]); 
+
+  // Loop for each detector - sum calculations
+  for(n=0; n<sett->nifo; n++) {
+    
+    modvir(sinalt, cosalt, sindelt, cosdelt,
+	   sett->N, &ifo[n], aux_arr);
+
+    nSource[0] = cosalt*cosdelt;
+    nSource[1] = sinalt*cosdelt;
+    nSource[2] = sindelt;
+					
+    for (i=0; i<sett->N; i++) {
+      
+      shiftadd = 0.; 					 
+      for (j=0; j<3; j++)
+      	shiftadd += nSource[j]*ifo[n].sig.DetSSB[i*3+j];		 
+      
+      // Phase 
+      phaseadd = sgnlo[0]*i + sgnlo[1]*aux_arr->t2[i] 
+        + (cof + 2.*sgnlo[1]*i)*shiftadd
+        - phaseshift; 
+
+      // The whole signal with 4 amplitudes and modulations 
+      signadd[n][i] = intrang[0]*(ifo[n].sig.aa[i])*cos(phaseadd) 
+                    + intrang[1]*(ifo[n].sig.aa[i])*sin(phaseadd) 
+                    + intrang[2]*(ifo[n].sig.bb[i])*cos(phaseadd) 
+                    + intrang[3]*(ifo[n].sig.bb[i])*sin(phaseadd);
+
+      // Sum over signals
+      sum += pow(signadd[n][i], 2.);
+    
+    } // data loop
+   
+  } // detector loop
+
+
+  // Signal amplitude h0 from the snr 
+  // (currently only makes sense for Gaussian noise with fixed sigma)
+  if(snr)
+    h0 = (snr*sigma_noise)/(sqrt(sum));
+
+  // Loop for each detector - adding signal to data (point by point)  								
+  for(n=0; n<sett->nifo; n++) {
+    for (i=0; i<sett->N; i++) {
+
+      // Adding the signal to the data vector 
+      if(ifo[n].sig.xDat[i]) {  
+//#mb     ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
+//#m      ifo[n].sig.xDat[i] += h0*signadd[n][i];
+        ifo[n].sig.xDat[i] = h0*signadd[n][i];
+
+
+      } 
+
+    } // data loop
+
+  } // detector loop
+
+  // Free auxiliary 2d array 
+  for(n=0; n<sett->nifo; n++) 
+    free(signadd[n]);
+  free(signadd);
+ 
+} // add_signal_drsearch()
+
+
 void sda_to_grid(Search_settings *sett,
 		Search_range *s_range, 
 		double sgnlol[]) { 
@@ -581,7 +776,7 @@ void sda_to_grid(Search_settings *sett,
   gsl_linalg_LU_decomp (&m.matrix, p, &s);
   gsl_linalg_LU_solve (&m.matrix, p, &b.vector, x);
   
-  s_range->spndr[0] = gsl_vector_get(x,1); 
+  s_range->spndr[0] = round(gsl_vector_get(x,1)); 
   s_range->nr[0]    = gsl_vector_get(x,2);
   s_range->mr[0]    = gsl_vector_get(x,3);
   

@@ -135,7 +135,7 @@ int main (int argc, char* argv[]) {
 
         // search settings, adding signal to data 
         // and corresponding grid range around the injection   
-        add_signal(&sett, &opts, &aux_arr, &s_range, line);
+        add_signal_drsearch(&sett, &opts, &aux_arr, &s_range, line);
 
         int Fnum=0;	// candidate signal number
 

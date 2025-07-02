@@ -21,6 +21,13 @@ void add_signal(
 		Search_range *s_range, 
     	char *line);
 
+void add_signal_drsearch(
+		Search_settings *sett,
+		Command_line_opts *opts,
+		Aux_arrays *aux_arr,
+		Search_range *s_range, 
+    	char *line);
+
 void sda_to_grid(
 		Search_settings *sett,
 		Search_range *s_range, 

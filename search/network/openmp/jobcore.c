@@ -70,9 +70,8 @@ void search(
 
     double be[2]; 
 
-    pm = ast2lin(opts->ra_val, opts->dec_val, C_EPSMA, be); 
-    s_range->pst = pm; 
-    s_range->pmr[1] = pm; 
+    s_range->pst = ast2lin(opts->ra_val, opts->dec_val, C_EPSMA, be); 
+    s_range->pmr[1] = s_range->pst; 
 
     //be = al/sett->oms;
 
@@ -84,7 +83,7 @@ void search(
     nn = (al1*sett->M[15] - al2*sett->M[14])/D; 
     mm = (al2*sett->M[10] - al1*sett->M[11])/D;
 
-    printf("Hemisphere: %d, nn: %lf, mm: %lf\n", pm, nn, mm);
+    printf("Hemisphere: %d, nn: %lf, mm: %lf\n", s_range->pst, nn, mm);
 
   } 
 
