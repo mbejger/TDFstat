@@ -10,23 +10,20 @@
 #include "settings.h"
 #include <glob.h>
 
+
 /* Search settings: 
  * FFT lenghts & other details, bandwidth and Earth parameters
  */
 
-void search_settings(Search_settings* sett) {
+void search_settings(Search_settings* sett)
+{
 
   double dt, B, oms, omr, Smin, Smax;
   int N, nfft, s, nd, interpftpad;
 
-
   dt = sett->dt;                    // data sampling time:  
-                                    // set in handle_opts() from the command line
-                                    // (the default value is dt=0.5)
-
   B = 0.5/dt;                       // Bandwidth
   oms = 2.*M_PI*(sett->fpo)*dt;     // Dimensionless angular frequency
-
   omr = C_OMEGA_R*dt;
 
   N = round (sett->nod*C_SIDDAY/dt);      // No. of data points
@@ -35,9 +32,7 @@ void search_settings(Search_settings* sett) {
   s = 1;                                    // No. of spindowns
 
   /* 
-  Smin = 1000.*C_YEARSEC;                   // Minimum spindown time 
-                                            // [sec.]
-
+     Smin = 1000.*C_YEARSEC;   // Minimum spindown time [sec.]
   // Maximum spindown (1000 years) [angular, dimensionless]
   Smax = 2.*M_PI*(sett->fpo + B)*dt*dt/(2.*Smin);   
   */
@@ -46,7 +41,7 @@ void search_settings(Search_settings* sett) {
   // we assume minimum NS age 1000 yr
   double fdotmin, fdotmax;
   if (sett->fpo < 200.) {
-      fdotmin = (sett->fpo+B)/(2.*1000.*C_YEARSEC);
+      fdotmin = 4.*(sett->fpo+B)/(2.*1000.*C_YEARSEC);
       fdotmax = 0.;
   } else {
       fdotmin = 1e-10;
@@ -54,11 +49,12 @@ void search_settings(Search_settings* sett) {
   }
 
   // dimensionless spindown range
-  Smax = 2.*M_PI*fdotmin*dt*dt;
-  Smin = 2.*M_PI*fdotmax*dt*dt;
+     //Smax = 2.*M_PI*fdotmin*dt*dt;
+     //Smin = 2.*M_PI*fdotmax*dt*dt;
+     Smax = M_PI*fdotmin*dt*dt;
+     Smin = M_PI*fdotmax*dt*dt;
 
-  nd = 2;     // Degree of freedom, 
-              // (2*nd = deg. no ofrees of freedom for chi^2)
+     nd = 2;     // Degree of freedom, (2*nd = deg. no ofrees of freedom for chi^2)
 
   interpftpad = 2;
 
@@ -86,12 +82,12 @@ void search_settings(Search_settings* sett) {
   sett->nmin = sett->fftpad*NAV*sett->B;
   sett->nmax = (sett->nfft/2 - NAV*sett->B)*sett->fftpad;
 
-  
+     // calculate 1/day frequency in units of Fstat bins
+     // signal width is ~ 5*dd
   double df = 2.*sett->B/sett->nfftf;  // frequency resolution of F
   double dayf = 1./C_SIDDAY;           // 1/day frequency
   int dayfbins = 1./C_SIDDAY * sett->nfftf/(2*sett->B);  // (1/day) / df
   sett->dd = dayfbins-1;         // search for F maximum in blocks of size dd
-  
 
   printf("------------------------ Settings --------------------------\n");
   printf(" B         N            nfft         Fstat_nmin   Fstat_nmax\n");
@@ -108,7 +104,6 @@ void search_settings(Search_settings* sett) {
 } // search settings  
 
 
-
 /* Network of detectors' discovery: 
  * finds subdirectories in the main input directory, 
  * which by convention should be named like V1, L1, H1 
@@ -116,8 +111,8 @@ void search_settings(Search_settings* sett) {
  * writes appropriate detector-related data into structs. 
  */ 
 
-void detectors_settings(Search_settings* sett, 
-			Command_line_opts *opts) {
+void detectors_settings( Search_settings* sett, Command_line_opts *opts)
+{
 
   int i=0, j=0; 
   char dirname[1024], x[1332];
@@ -138,15 +133,14 @@ void detectors_settings(Search_settings* sett,
 
   // test availability of data for detectors
   for (i=0; i<3; i++) {
-    if ( !strlen(opts->usedet) ||
-	 (strlen(opts->usedet) && (strstr(opts->usedet, dets[i]))) ) {
+          if ( !strlen(opts->usedet) || (strlen(opts->usedet) && (strstr(opts->usedet, dets[i]))) ) {
       // detector directory
       memset(dirname, 0, sizeof(dirname));
       sprintf (dirname, "%s/%03d/%s", opts->indir, opts->seg, dets[i]);
       dp = opendir(dirname);
       if (dp) {
 	closedir(dp);
-	sprintf(x, "%s/xdatsc_%03d_%04d%s.bin", dirname, opts->seg,
+	sprintf(x, "%s/xdat_%03d_%04d%s.bin", dirname, opts->seg,
 		opts->band, opts->label);
 	data = fopen(x, "r");
 	if (data) {
@@ -159,8 +153,7 @@ void detectors_settings(Search_settings* sett,
 	} else {
 	  printf("Directory %s exists, but no input file found:\n%s missing...\n", dirname, x);
 	  exit(EXIT_FAILURE);
-	}
-	
+	}	
       } else {
 	if ( strlen(opts->usedet) && (strstr(opts->usedet, dets[i])) ) {
 	  printf("Can't open the input directory requied by -usedet: %s", dirname);
@@ -174,11 +167,11 @@ void detectors_settings(Search_settings* sett,
 
   for(i=0; i<sett->nifo; i++) {
     
-    printf("Using %s IFO as detector #%d... %s as input time series data\n", 
-	   ifo[i].name, i, ifo[i].xdatname);
+          //    printf("Using %s IFO as detector #%d... %s as input time series data\n",
+          printf("IFO[%d] = %s , data = %s\n", i, ifo[i].name, ifo[i].xdatname);
 
-    // Virgo detector
-    if(!strcmp("V1", ifo[i].name)) {
+          if(!strcmp("V1", ifo[i].name)) {
+    		// Virgo detector
       
       // Geographical latitude phi in radians
       ifo[i].ephi = (43.+37./60.+53.0880/3600.)/RAD_TO_DEG;
@@ -189,8 +182,8 @@ void detectors_settings(Search_settings* sett,
       // Orientation of the detector gamma
       ifo[i].egam = (135. - (19.0+25./60.0+57.96/3600.))/RAD_TO_DEG;
       
-      // Hanford H1 detector
-    } else if(!strcmp("H1", ifo[i].name )) {
+          } else if(!strcmp("H1", ifo[i].name )) {
+      		// Hanford H1 detector
       
       // Geographical latitude phi in radians
       ifo[i].ephi = (46+(27+18.528/60.)/60.)/RAD_TO_DEG;
@@ -201,8 +194,8 @@ void detectors_settings(Search_settings* sett,
       // Orientation of the detector gamma
       ifo[i].egam = 170.9994/RAD_TO_DEG;
       
-      // Livingston L1 detector
-    } else if(!strcmp("L1", ifo[i].name )) {
+          } else if(!strcmp("L1", ifo[i].name )) {
+      		// Livingston L1 detector
       
       // Geographical latitude phi in radians
       ifo[i].ephi = (30+(33+46.4196/60.)/60.)/RAD_TO_DEG;
@@ -225,7 +218,8 @@ void detectors_settings(Search_settings* sett,
    * of the Virgo detector
    */ 
 
-void rogcvir(Detector_settings *ifo) {
+void rogcvir(Detector_settings *ifo)
+{
 
   /* In the notation of Phys. Rev. D 58, 063001 (1998):
    * ephi = lambda (geographical latitude phi in radians)
@@ -246,7 +240,6 @@ void rogcvir(Detector_settings *ifo) {
   ifo->amod.c8 = cos(2.*ifo->egam)*cos(ifo->ephi);
   ifo->amod.c9 = .5*sin(2.*ifo->egam)*sin(2.*ifo->ephi);
 
-
 } // rogcvir
 
 
@@ -254,7 +247,8 @@ void rogcvir(Detector_settings *ifo) {
    */ 
 
 void modvir(double sinal, double cosal, double sindel, double cosdel,
-	    int Np, Detector_settings *ifo, Aux_arrays *aux) {
+             int Np, Detector_settings *ifo, Aux_arrays *aux)
+{
 
   int t;
   double cosalfr, sinalfr, c2d, c2sd, c, s, c2s, cs;
@@ -292,12 +286,11 @@ void modvir(double sinal, double cosal, double sindel, double cosdel,
 	  ifo->sig.bb[t] = 0.;
       }
   } 
-
 } // modvir
 
 
-int read_lines( Search_settings *sett,
-		Command_line_opts *opts ){
+int read_lines( Search_settings *sett,	Command_line_opts *opts )
+{
 
   int i=0, lnum, j;
   char linefile[1200], line[512], *lfile;
@@ -324,10 +317,8 @@ int read_lines( Search_settings *sett,
   // calculate fdotMax from sett.Smin
   fdotMax = sett->Smin/(2.*M_PI*sett->dt*sett->dt);
 
-  //
   // for each detector
   // calculate max line broadening due to demodulation
-  //
 
   double *dE, *dtE;
   dE = (double *)calloc(3*sett->N, sizeof(double));
@@ -444,7 +435,7 @@ int read_lines( Search_settings *sett,
   
        globfree(&globbuf);
        
-  } // det
+     } // for det
   
 
   lnum = i;
@@ -507,7 +498,6 @@ int read_lines( Search_settings *sett,
 	    }
 	    break; 
       
-
 	    // Comb with scaling-width. Vetoing the band 
 	    // [offset+index*spacing-index*leftwidth, offset+index*spacing+index*rightwidth]       
        case 2:
@@ -536,7 +526,6 @@ int read_lines( Search_settings *sett,
   } // i
 
   printf("%d veto lines in band [Hz, radians, line info]:\n", j-sett->numlines_band);
-
 
   // save veto lines to a file
   sprintf(linefile, "%s/triggers_%03d_%04d%s.vlines", 
@@ -577,13 +566,13 @@ int read_lines( Search_settings *sett,
   for(i=0; i<sett->numlines_band; i++) 
        printf("   %f %f\n", sett->lines[i][0], sett->lines[i][1]);
   
-  
   return 0; 
   
 }
 
 
-int line_in_band(double* fl, double* fr, Search_settings* sett ) {
+int line_in_band(double* fl, double* fr, Search_settings* sett )
+{
 
     double bs, be;        // Band start and end  
 
@@ -601,7 +590,8 @@ int line_in_band(double* fl, double* fr, Search_settings* sett ) {
 
 
 
-void narrow_down_band(Search_settings* sett, Command_line_opts *opts) {
+void narrow_down_band(Search_settings* sett, Command_line_opts *opts)
+{
   
   // Adding excluding ranges near the edges to the known lines list 
   sett->lines[0][0] = 0;
@@ -616,8 +606,8 @@ void narrow_down_band(Search_settings* sett, Command_line_opts *opts) {
 }
 
 
-
-void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag) {
+void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag)
+{
      
   // lf - index of first line, le - index of last line
   int i; 
@@ -646,4 +636,3 @@ void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag) {
   }
  
 }
-

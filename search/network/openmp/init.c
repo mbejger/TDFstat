@@ -26,11 +26,11 @@
 #endif
 
 
-
 void read_ini_file( Search_settings *sett, 
 		    Command_line_opts *opts,
 		    int argc, 
-		    char* argv[]) {
+                    char* argv[])
+{
   
   char ini_fname[FNAME_LENGTH];
   dictionary *ini;
@@ -50,8 +50,9 @@ void read_ini_file( Search_settings *sett,
     perror(ini_fname);
     exit(EXIT_FAILURE);
   }
-  
+     printf("-- INI file contents --\n");
   iniparser_dump(ini, stdout);
+     printf("-----------------------\n");
   
   // directory containing input data
   opts->indir = iniparser_getstring(ini, "search:indir", NULL);
@@ -71,10 +72,13 @@ void read_ini_file( Search_settings *sett,
   sett->dt = iniparser_getdouble(ini, "search:dt", -1.);
   // bands overlap [0-1.] defines band base frequency, fpo
   opts->overlap = iniparser_getdouble(ini, "search:overlap", 0.);
-  // [0-0.5] range of frequencies to output; 0 is nothing, 0.5 is full band
+  // [0-0.5] range of frequencies to output; 0 is nothing, 0.5 is full band,
+  // -1 means automatic for given overlap
   opts->narrowdown = iniparser_getdouble(ini, "search:narrowdown", -1.);
   // use data from subset of detectors only (default is to use all available)
   opts->usedet = iniparser_getstring(ini, "search:usedet", "");
+  // path to the grid file (absolute or relative)
+  opts->grid_file = iniparser_getstring(ini, "search:grid_file", "");
   // name of the range file to read
   opts->range_file = iniparser_getstring(ini, "search:range_file", "");
   // name of the range file to dump and exit
@@ -103,10 +107,6 @@ void read_ini_file( Search_settings *sett,
   // [0, 1] generate checkpoint files at each new sky position
   opts->checkp_flag = iniparser_getint(ini, "search:checkp_flag", 0);
 
-  
-  // state_file is set in read_checkpoint
-
-  
   // various checks
   if (! opts->indir) {
     error = 1; printf("[ERROR] missing indir !\n");
@@ -123,7 +123,6 @@ void read_ini_file( Search_settings *sett,
   if (sett->dt < 0.) {
     error = 1; printf("[ERROR] missing dt !\n");
   }
-
   if (error == 1) exit(EXIT_FAILURE);
 
   // test overlap and narrowdown
@@ -135,49 +134,51 @@ void read_ini_file( Search_settings *sett,
   
   sett->fpo = 10. + (1. - opts->overlap)*opts->band*(0.5/sett->dt);
   
-}
+} // read_ini_file
 
 
 /* Generate grid from the M matrix (grid.bin) */ 
 
-void read_grid( Search_settings *sett, 
-		Command_line_opts *opts ) {
+void read_grid( Search_settings *sett, Command_line_opts *opts )
+{
      
      sett->M = (double *) calloc (16, sizeof (double));
      
      FILE *data;
-     char filename[1024];
-     int i, status;
+     char filename[FNAME_LENGTH];
+     int i;
      
-     // In case when -usedet option is used for one detector
+     // In case when usedet option is used for one detector
      // i.e. opts->usedet has a length of 2 (e.g. H1 or V1),
      // or data dir contains only one detector,
      // read grid.bin from this detector subdirectory 
      // (see detectors_settings() in settings.c for details)
      
-     if(strlen(opts->usedet)==2 || sett->nifo==1 ) {
-	  //sprintf (filename, "%s/%03d/%s/grid.bin", opts->dtaprefix, opts->ident, opts->usedet);
+     if ( opts->grid_file[0] == '/' ) {
+          // absolute path specified
+          sprintf (filename, "%s", opts->grid_file);
+     } else if ( strlen(opts->grid_file) > 0 ) {
+          // relative path specified
+          sprintf (filename, "%s/%s", opts->indir, opts->grid_file);
+     } else if (strlen(opts->usedet)==2 && sett->nifo==1) {
+          // default path for one detector
      	  sprintf (filename, "%s/%03d/%s/grid.bin", opts->indir, opts->seg, ifo[0].name);
      } else {
-	  //sprintf (filename, "%s/%03d/grid.bin", opts->dtaprefix, opts->ident);
-	  // det network
+          // default path for network of detectors
 	  char dnet_str[MAX_DETECTORS*DETNAME_LENGTH]="";
           for(i=0; i<sett->nifo; i++)
 	       strcat(dnet_str, ifo[i].name);
-
-	  sprintf (filename, "%s/%03d/grids/grid_%03d_%04d_%sc.bin", opts->indir, opts->seg, opts->seg, opts->band, dnet_str);
+	  sprintf (filename, "%s/%03d/grids/grid_%03d_%04d_%s.bin", opts->indir, opts->seg, opts->seg, opts->band, dnet_str);
      }
 	  
-
      if ((data=fopen (filename, "r")) != NULL) {
-	  printf("Using grid file %s\n", filename);
-	  status = fread ((void *)&sett->fftpad, sizeof (int), 1, data);
-
-	  printf("fftpad from the grid file: %d\n", sett->fftpad); 
-	
+          int status; 
+          printf("grid_file = %s\n", filename);
+          status = fread ((void *)&sett->fftpad, sizeof (int), 1, data);
+	  printf("fftpad from the grid file: %d\n", sett->fftpad); 	
 	  // M: vector of 16 components consisting of 4 rows
 	  // of 4x4 grid-generating matrix
-	  status = fread ((void *)sett->M, sizeof (double), 16, data);
+          status = fread ((void *)sett->M, sizeof (double), 16, data);
 	  fclose (data);
      } else {
 	  perror (filename);
@@ -189,11 +190,10 @@ void read_grid( Search_settings *sett,
 
   /* Array initialization */ 
 
-void init_arrays(
-		 Search_settings *sett, 
+void init_arrays( Search_settings *sett,
 		 Command_line_opts *opts,
-		 Aux_arrays *aux_arr
-		 ) {
+                  Aux_arrays *aux_arr )
+{
 
   int i; 
   size_t status;
@@ -205,12 +205,11 @@ void init_arrays(
 
   for(i=0; i<sett->nifo; i++) { 
 
-    ifo[i].sig.xDat = (double *) calloc(sett->N, sizeof(double));
-    
-    // Extra array in case of software injections (to keep the original contents)
-    //#mb  
-    //ifo[i].sig.xDatorig = (double *) calloc(sett->N, sizeof(double));
-    
+    ifo[i].sig.xDat = (float *) calloc(sett->N, sizeof(float));
+
+    // Extra array in case of software injections (to keep the original xdat contents)
+    ifo[i].sig.xDatorig = (float *) calloc(sett->N, sizeof(float));
+
     // Input time-domain data handling
     // 
     // The file name ifo[i].xdatname is constructed 
@@ -218,18 +217,15 @@ void init_arrays(
     // subdirectories
     
     if((data = fopen(ifo[i].xdatname, "r")) != NULL) {
-      status = fread((void *)(ifo[i].sig.xDat), 
-		     sizeof(double), sett->N, data);
-      fclose (data);
-      
+               status = fread((void *)(ifo[i].sig.xDat), sizeof(float), sett->N, data);
+      fclose (data);  
     } else {
       perror (ifo[i].xdatname);
       exit(EXIT_FAILURE); 
     }
     
-    //#mb
     // Copy ifo[i].sig.xDat to ifo[i].sig.xDatorig for safekeeping 
-    //memcpy(ifo[i].sig.xDatorig, ifo[i].sig.xDat, sett->N*sizeof(double));
+    memcpy(ifo[i].sig.xDatorig, ifo[i].sig.xDat, sett->N*sizeof(float));
 
     int j, Nzeros=0;
     // Checking for null values in the data
@@ -241,7 +237,7 @@ void init_arrays(
     // factor N/(N - Nzeros) to account for null values in the data
     ifo[i].sig.crf0 = (double)sett->N/(sett->N - ifo[i].sig.Nzeros);
 
-    // Estimation of the variance for each detector 
+    //#mb Estimation of the variance for each detector
     ifo[i].sig.sig2 = 1; //(ifo[i].sig.crf0)*var(ifo[i].sig.xDat, sett->N);
 
     ifo[i].sig.DetSSB = (double *) calloc(3*sett->N, sizeof(double));
@@ -253,27 +249,22 @@ void init_arrays(
 
     // Ephemeris file handling
     char filename[562];
-    sprintf (filename, "%s/%03d/%s/DetSSB.bin", 
-        opts->indir, opts->seg, ifo[i].name);
+          sprintf (filename, "%s/%03d/%s/DetSSB.bin", opts->indir, opts->seg, ifo[i].name);
 
     if((data = fopen(filename, "r")) != NULL) {
       // Detector position w.r.t Solar System Baricenter
       // for every datapoint
-      status = fread((void *)(ifo[i].sig.DetSSB), 
-               sizeof(double), 3*sett->N, data);
+               status = fread((void *)(ifo[i].sig.DetSSB), sizeof(double), 3*sett->N, data);
 
       // Deterministic phase defining the position of the Earth
       // in its diurnal motion at t=0 
-      status = fread((void *)(&ifo[i].sig.phir), 
-               sizeof(double), 1, data);
+               status = fread((void *)(&ifo[i].sig.phir), sizeof(double), 1, data);
 
       // Earth's axis inclination to the ecliptic at t=0
-      status = fread((void *)(&ifo[i].sig.epsm), 
-               sizeof(double), 1, data);
+               status = fread((void *)(&ifo[i].sig.epsm), sizeof(double), 1, data);
       fclose (data);
 
       printf("Using %s as detector %s ephemerids...\n", filename, ifo[i].name);
-
     } else {
       perror (filename);
       return ;
@@ -302,10 +293,10 @@ void init_arrays(
   // Check if the ephemerids have the same epsm parameter
   for(i=1; i<sett->nifo; i++) {  
     if(!(ifo[i-1].sig.sepsm == ifo[i].sig.sepsm)) { 
-      printf("The parameter epsm (DetSSB.bin) differs for detectors %s and %s. Aborting...\n", ifo[i-1].name, ifo[i].name); 
+               printf("The parameter epsm (DetSSB.bin) differs for detectors %s and %s. Aborting...\n",
+                    ifo[i-1].name, ifo[i].name);
       exit(EXIT_FAILURE);
     } 
-
   } 
 
   // if all is well with epsm, take the first value 
@@ -327,13 +318,7 @@ void init_arrays(
   
 } // end of init arrays 
 
-void grid_sky_position(
-		Search_settings *sett,
-		Command_line_opts *opts) { 
 
-
-} 
-	
 
   /* Add signal to data   */ 
 
@@ -341,10 +326,11 @@ void add_signal(
 		Search_settings *sett,
 		Command_line_opts *opts,
 		Aux_arrays *aux_arr,
-		Search_range *s_range, 
-    char *line) {
+		Search_range *s_range,
+    		char *line) 
+{
 
-  int i, j, n, reffr; 
+  int i, j, n, reffr;
   double snr=0, sum = 0., h0=0, cof, d1; 
   double sigma_noise = 1.0;
   double be[2];
@@ -393,12 +379,14 @@ void add_signal(
       return;
   }
 
-  // Saving the injection frequency in s_range struct 
+  // Saving the injection frequency in s_range struct
+  // (it's already shifted to the reference segment, see above)
   s_range->freq_inj = sgnlo[0];
 
   cof = sett->oms + sgnlo[0]; 
   
-  for(i=0; i<2; i++) sgnlol[i] = sgnlo[i]; 
+     for (i=0; i<2; i++)
+          sgnlol[i] = sgnlo[i];
   
   // Calculate the hemisphere and be vector 
   s_range->pmr[0] = ast2lin(sgnlo[3], sgnlo[2], C_EPSMA, be);
@@ -542,9 +530,8 @@ void add_signal(
 
       // Adding the signal to the data vector 
       if(ifo[n].sig.xDat[i]) { 
-//#mb 
-//        ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
-        ifo[n].sig.xDat[i] += h0*signadd[n][i];
+ 
+      	ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
 
       } 
 
@@ -620,7 +607,8 @@ void add_signal_drsearch(
       return;
   }
 
-  // Saving the injection frequency in s_range struct 
+  // Saving the injection frequency in s_range struct
+  // (it's already shifted to the reference segment, see above) 
   s_range->freq_inj = sgnlo[0];
 
   cof = sett->oms + sgnlo[0]; 
@@ -695,8 +683,7 @@ void add_signal_drsearch(
   // Loop for each detector - sum calculations
   for(n=0; n<sett->nifo; n++) {
     
-    modvir(sinalt, cosalt, sindelt, cosdelt,
-	   sett->N, &ifo[n], aux_arr);
+    modvir(sinalt, cosalt, sindelt, cosdelt, sett->N, &ifo[n], aux_arr);
 
     nSource[0] = cosalt*cosdelt;
     nSource[1] = sinalt*cosdelt;
@@ -722,31 +709,23 @@ void add_signal_drsearch(
       // Sum over signals
       sum += pow(signadd[n][i], 2.);
     
-    } // data loop
-   
+    } // data loop 
   } // detector loop
-
 
   // Signal amplitude h0 from the snr 
   // (currently only makes sense for Gaussian noise with fixed sigma)
-  if(snr)
-    h0 = (snr*sigma_noise)/(sqrt(sum));
+  if(snr) h0 = (snr*sigma_noise)/(sqrt(sum));
 
   // Loop for each detector - adding signal to data (point by point)  								
   for(n=0; n<sett->nifo; n++) {
     for (i=0; i<sett->N; i++) {
-
       // Adding the signal to the data vector 
       if(ifo[n].sig.xDat[i]) {  
 //#mb     ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
-//#m      ifo[n].sig.xDat[i] += h0*signadd[n][i];
+//#mb     ifo[n].sig.xDat[i] += h0*signadd[n][i];
         ifo[n].sig.xDat[i] = h0*signadd[n][i];
-
-
       } 
-
     } // data loop
-
   } // detector loop
 
   // Free auxiliary 2d array 
@@ -788,19 +767,17 @@ void sda_to_grid(Search_settings *sett,
 
 
 
-
 /* Search range */ 
 
-void set_search_range(
-		      Search_settings *sett, 
+void set_search_range( Search_settings *sett,
 		      Command_line_opts *opts, 
-		      Search_range *s_range) { 
+                       Search_range *s_range)
+{
   
   // Hemispheres (with respect to the ecliptic)
   if(opts->hemi) {
     s_range->pmr[0] = opts->hemi;
     s_range->pmr[1] = opts->hemi;
-
   } else {
     s_range->pmr[0] = 1;
     s_range->pmr[1] = 2;
@@ -916,18 +893,13 @@ void set_search_range(
       exit(EXIT_FAILURE);
     }
 
-
   } else {
 
     // Establish the grid range in which the search will be performed
     // with the use of the M matrix from grid.bin
-    gridr(
-	  sett->M, 
-	  s_range->spndr,
-	  s_range->nr,
-	  s_range->mr,
-	  sett->oms,
-	  sett->Smax);
+          gridr( sett->M, s_range->spndr,
+                 s_range->nr, s_range->mr,
+                 sett->oms, sett->Smax);
 
     if (strlen(opts->dump_range_file)) {
 
@@ -950,7 +922,6 @@ void set_search_range(
 	
       }
     }
-
   }
 
   printf("set_search_range() - the grid ranges are maximally this:\n"); 
@@ -963,15 +934,14 @@ void set_search_range(
 } // end of set search range 
 
 
-  /* FFT Plans 
-	 */
+/* FFT Plans	 */
 
-void plan_fftw(
-	       Search_settings *sett,
+void plan_fftw( Search_settings *sett,
 	       Command_line_opts *opts,
 	       FFTW_plans *plans,
 	       FFTW_arrays *fftw_arr,
-	       Aux_arrays *aux_arr) {
+                Aux_arrays *aux_arr)
+{
 
   char hostname[128], wfilename[512];
   FILE *wisdom;
@@ -1001,14 +971,9 @@ void plan_fftw(
     fclose (wisdom);
   }
 
-  // moved to settings
-  //sett->Ninterp = sett->interpftpad*sett->nfft; 
-  //sett->nfftf = sett->fftpad*sett->nfft;
-
   // arrays xa,xb are used for in-place interpolation,
   // thus their length is max{fftpad*nfft, Ninterp}
-  fftw_arr->arr_len = (sett->nfftf > sett->Ninterp
-		       ? sett->nfftf : sett->Ninterp);
+  fftw_arr->arr_len = (sett->nfftf > sett->Ninterp ? sett->nfftf : sett->Ninterp);
 
   fftw_arr->xa = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
   fftw_arr->xb = (fftw_complex *)fftw_malloc(fftw_arr->arr_len*sizeof(fftw_complex));
@@ -1046,21 +1011,24 @@ void plan_fftw(
 } // end of FFT plans 
 
 
-  /* Checkpointing */
+/* Checkpointing
+it is kept here but we don't use it anymore */
 
 void read_checkpoints( Command_line_opts *opts, 
 		       Search_range *s_range, 
-		       int *FNum) {
+                       int *FNum)
+{
 
   if(opts->checkp_flag) {
 
     // filename of checkpoint state file, depending on the hemisphere
-    if(opts->hemi)
+          if(opts->hemi){
       sprintf(opts->state_file, "state_%03d_%04d%s_%d.dat",  
 	      opts->seg, opts->band, opts->label, opts->hemi);
-    else
+          } else {
       sprintf(opts->state_file, "state_%03d_%04d%s.dat", 
 	      opts->seg, opts->band, opts->label);
+          }
     
     FILE *state;
     if((state = fopen(opts->state_file, "r")) != NULL) {
@@ -1072,8 +1040,7 @@ void read_checkpoints( Command_line_opts *opts,
 	// This means that state file is empty (=end of the calculations)
 	fprintf (stderr, "State file empty: nothing to do...\n");
 	fclose (state);
-	exit(EXIT_FAILURE);
-	
+	exit(EXIT_FAILURE);	
       }
 
       fclose (state);
@@ -1087,7 +1054,7 @@ void read_checkpoints( Command_line_opts *opts,
       *FNum = 0;
     } // if state
 
-  } else {
+  } else {  // no checkpointing
     s_range->pst = s_range->pmr[0];
     s_range->mst = s_range->mr[0];
     s_range->nst = s_range->nr[0];
@@ -1100,20 +1067,19 @@ void read_checkpoints( Command_line_opts *opts,
 
   /* Cleanup & memory free  */
 
-void cleanup(
-	Search_settings *sett,
+void cleanup( Search_settings *sett,
 	Command_line_opts *opts,
 	Search_range *s_range,
 	FFTW_plans *plans,
 	FFTW_arrays *fftw_arr,
-	Aux_arrays *aux
-	) {
+              Aux_arrays *aux)
+{
 
   int i; 
 
   for(i=0; i<sett->nifo; i++) {
     free(ifo[i].sig.xDat);
-//#mb    free(ifo[i].sig.xDatorig); 
+    free(ifo[i].sig.xDatorig); 
     free(ifo[i].sig.xDatma);
     free(ifo[i].sig.xDatmb);
     free(ifo[i].sig.DetSSB);
@@ -1143,18 +1109,17 @@ void cleanup(
   fftw_forget_wisdom();
   fftw_cleanup();
 
-
 } // end of cleanup & memory free 
 
 
 
-	/*	Command line options handling: coincidences  
-	 */ 
+/*	Command line options handling: coincidences	 */
 	
 void handle_opts_coinc( Search_settings *sett,
 			Command_line_opts_coinc *opts,
 			int argc,
-			char* argv[]) {
+                        char* argv[])
+{
 	
   opts->wd=NULL;
 	
@@ -1360,7 +1325,9 @@ void handle_opts_coinc( Search_settings *sett,
 } // end of command line options handling: coincidences  
 
 
-void manage_grid_matrix( Search_settings *sett, char *gridfile ) {
+
+void manage_grid_matrix( Search_settings *sett, char *gridfile )
+{
 
   FILE *data;
   int status; 

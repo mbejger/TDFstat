@@ -19,8 +19,7 @@
 
 #define C_EPSMA (84381.448/3600./RAD_TO_DEG)
 //#define C_EPSMA 0.409092804222328965124688693322241306304931640625
-// Average obliquity
-// of the ecliptic: 23.439
+// Average obliquity of the ecliptic: 23.439
 
 //Earth ellipsoid
 #define C_ELLIPSOID_A 6378.140
@@ -36,15 +35,11 @@
 #define C_YEARSEC (365.25*C_TAIDAY)
 //31557600.0          // year in seconds = 365.25 * 86400
 
-
 void search_settings( Search_settings *sett );
-
 void detectors_settings( Search_settings *sett, Command_line_opts *opts );
 
 void rogcvir( Detector_settings *ifo ); 
-
-void modvir(
-	    double sinal,
+void modvir( double sinal,
 	    double cosal, 
 	    double sindel, 
 	    double cosdel,	
@@ -56,11 +51,8 @@ int lineph( double, double *, double *, char *, char *, int );
 
 // Lines and excluded regions treatment
 void narrow_down_band( Search_settings* sett,  Command_line_opts *opts );
-
 int read_lines( Search_settings *sett, Command_line_opts *opts );
-
 int line_in_band( double* fl, double* fr, Search_settings* sett );
-
 void lines_veto_fraction(Search_settings* sett, int lf, int le, int vflag);
 
 // Coincidences 

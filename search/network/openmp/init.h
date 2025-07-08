@@ -19,14 +19,14 @@ void add_signal(
 		Command_line_opts *opts,
 		Aux_arrays *aux_arr,
 		Search_range *s_range, 
-    	char *line);
+    		char *line);
 
 void add_signal_drsearch(
 		Search_settings *sett,
 		Command_line_opts *opts,
 		Aux_arrays *aux_arr,
 		Search_range *s_range, 
-    	char *line);
+    		char *line);
 
 void sda_to_grid(
 		Search_settings *sett,
@@ -62,13 +62,16 @@ void cleanup(
 	     FFTW_arrays *fftw_arr,
 	     Aux_arrays *aux);
 
-
 // Coincidences specific functions 
 void handle_opts_coinc(
 		       Search_settings *sett,
 		       Command_line_opts_coinc *opts,
 		       int argc,  
 		       char* argv[]);  
+
+void manage_grid_matrix_old(
+                    Search_settings *sett,
+                    Command_line_opts_coinc *opts);
 
 void manage_grid_matrix(
 				Search_settings *sett, 

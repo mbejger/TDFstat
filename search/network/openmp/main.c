@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <getopt.h>
+//#include <getopt.h>
 #include <gsl/gsl_linalg.h>
 #include <time.h>
 #include <dirent.h>
@@ -25,12 +25,12 @@
 #define CODEVER unknown
 #endif
 
-
 Detector_settings ifo[MAX_DETECTORS];
 volatile sig_atomic_t save_state = 0;
 
 
-int main (int argc, char* argv[]) {
+int main (int argc, char* argv[])
+{
 
   Command_line_opts opts;
   Search_settings sett;
@@ -70,8 +70,7 @@ int main (int argc, char* argv[]) {
   if (stat(opts.outdir, &buffer) == -1) {
     if (errno == ENOENT) {
       // Output directory apparently does not exist, try to create one
-      if(mkdir(opts.outdir, S_IRWXU | S_IRGRP | S_IXGRP 
-          | S_IROTH	| S_IXOTH) == -1) {
+               if(mkdir(opts.outdir, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH	| S_IXOTH) == -1) {
 	      perror (opts.outdir);
 	      return 1;
       }
@@ -90,7 +89,7 @@ int main (int argc, char* argv[]) {
   // Search settings
   search_settings(&sett); 
 
-  // Array initialization, reading in the input data and the ephemerids 
+     // Array initialization and reading the ephemerids
   init_arrays(&sett, &opts, &aux_arr);
 
   // Narrowing-down the band (excluding the edges 
@@ -158,23 +157,14 @@ int main (int argc, char* argv[]) {
     read_checkpoints(&opts, &s_range, &Fnum);
 
     // main search job
-    search(&sett, &opts, &s_range, 
-         &fftw_plans, &fftw_arr, &aux_arr, &Fnum);
-  } 
+     search(&sett, &opts, &s_range, &fftw_plans, &fftw_arr, &aux_arr, &Fnum);
 
-  // state file is emptied and closed in jobcore to mark successful end
-  // do not remove it here
-  /*
-  FILE *state;
-  if(opts.checkp_flag) {
-    remove(opts.qname);
   }
-  */
   
   // Cleanup & memory free 
   cleanup(&sett, &opts, &s_range, &fftw_plans, &fftw_arr, &aux_arr);
 
-  return 0; 
+     return(EXIT_SUCCESS);
 	
 }
 

@@ -15,18 +15,17 @@
 
 // lin2ast described in Phys. Rev. D 82, 022005 (2010) (arXiv:1003.0844)
 void lin2ast (double be1, double be2, int pm, double sepsm, double cepsm, 
-	      double *sinal, double *cosal, double *sindel, double *cosdel) {
-
+              double *sinal, double *cosal, double *sindel, double *cosdel)
+{
   *sindel = be1*sepsm-(2*pm-3)*sqrt(1.-sqr(be1)-sqr(be2))*cepsm;
   *cosdel = sqrt(1.-sqr(*sindel));
   *sinal = (be1-sepsm*(*sindel))/(cepsm*(*cosdel));
   *cosal = be2/(*cosdel);
-
 } /* lin2ast() */
 
 
-int ast2lin (double alfa, double delta, double epsm, double *be) {
-
+int ast2lin (double alfa, double delta, double epsm, double *be)
+{
   /* alfa - right ascension [rad]
      delta - declination [rad]
      Mean obliquity of the equator with respect to the ecliptic at J2000.0:
@@ -45,7 +44,6 @@ int ast2lin (double alfa, double delta, double epsm, double *be) {
 //          - sqrt(1. - be[0]*be[0] - be[1]*be[1])*cos(epsm)) - delta;
 
     int pm; 
-
     if(fabs(d1)  < 10.*DBL_EPSILON)
         pm = 1;
     else
@@ -56,8 +54,8 @@ int ast2lin (double alfa, double delta, double epsm, double *be) {
 
 
 
-inline void spline(complex double *y, int n, complex double *y2) {
-
+inline void spline(complex double *y, int n, complex double *y2)
+{
   int i, k;
   complex double invp, qn, un;
   static complex double *u = NULL;
@@ -79,11 +77,12 @@ inline void spline(complex double *y, int n, complex double *y2) {
   y2[n-1] = (un-qn*u[n-2])/(qn*y2[n-2]+1.);
   for (k=n-2; k>=0; --k)
     y2[k] = y2[k]*y2[k+1]+u[k];
+
 } /* spline() */
 
 
-inline complex double splint (complex double *ya, complex double *y2a, int n, double x) {
-
+inline complex double splint (complex double *ya, complex double *y2a, int n, double x)
+{
   int klo, khi;
   double b, a;
 
@@ -94,11 +93,13 @@ inline complex double splint (complex double *ya, complex double *y2a, int n, do
   a = khi - x;
   b = x - klo;
   return a*ya[klo]+b*ya[khi]+((a*a*a-a)*y2a[klo]+(b*b*b-b)*y2a[khi])/6.0;
+
 } /* splint() */
 
 
 void splintpad (complex double *ya, double *shftf, int N, int interpftpad,
-	   complex double *out) {
+                complex double *out)
+{
   /* Cubic spline with "natural" boundary conditions.
      Input:
      ya[i] - value of the function being interpolated in x_i = i,
@@ -133,8 +134,8 @@ void splintpad (complex double *ya, double *shftf, int N, int interpftpad,
 
 
 // pci test
-void linterp (complex double *ya, double *shftf, int N, int interpftpad,
-	      complex double *out) {
+void linterp (complex double *ya, double *shftf, int N, int interpftpad, complex double *out)
+{
      /* linear interpolation
 	Input:
 	ya[i] - value of the function being interpolated in x_i = i,
@@ -159,12 +160,13 @@ void linterp (complex double *ya, double *shftf, int N, int interpftpad,
 	  out[i] = dya_abs*dx*cexp(dya_arg*dx*I);
      }
      
-}
+} //linterp()
 
 
 
 // test version
-void triginterp (complex double *ya, complex double *yb, double *shftf, int N, int nfft, complex double *outa, complex double *outb) {
+void triginterp (complex double *ya, complex double *yb, double *shftf, int N, int nfft, complex double *outa, complex double *outb)
+{
      /* trigonometric interpolation - direct sum of fourier modes
 	Input:
 	ya[i], yb[i] - value of the function being interpolated in x_i = i,
@@ -204,12 +206,11 @@ void triginterp (complex double *ya, complex double *yb, double *shftf, int N, i
 }
 
 
-
-double var (double *x, int n) {
+double var (float *x, int n)
+{
   /* var(x, n) returns the variance (square of the standard deviation)
      of a given vector x of length n.
   */
-
   int i;
   double mean=0., variance=0.;
 
@@ -294,9 +295,12 @@ void gridr (double *M, float *spndr, float *nr, float *mr, double oms, double Sm
   }
 } /* gridr() */
 
-double FStat (FLOAT_TYPE *F, int nfft, int nav, int indx) {
-  /* FStat Smoothed F-statistic */
 
+/* Should not be used */
+double FStat (FLOAT_TYPE *F, int nfft, int nav, int indx)
+{
+  /* FStat Smoothed F-statistic */
+     // it should not be used
   // input:
   // *F - pointer to the value of F statistic
   // nfft - the length of the FFT data
@@ -322,7 +326,9 @@ double FStat (FLOAT_TYPE *F, int nfft, int nav, int indx) {
   return pxout;
 } /* FStat() */
 
-int ludcmp (double *a, int n, int *indx, double *d) {
+
+int ludcmp (double *a, int n, int *indx, double *d)
+{
 /*	LU decomposition of a given real matrix a[0..n-1][0..n-1]
 	Input:
 	a		- an array containing elements of matrix a
@@ -389,7 +395,9 @@ int ludcmp (double *a, int n, int *indx, double *d) {
   return 0;
 } /* ludcmp() */
 
-int lubksb (double *a, int n, int *indx, double *b) {
+
+int lubksb (double *a, int n, int *indx, double *b)
+{
 /* Solves the set of n linear equations A X=B.
    Input:
    a[0..n-1][0..n-1] - LU decomposition af a matrix A,
@@ -425,7 +433,9 @@ int lubksb (double *a, int n, int *indx, double *b) {
   return 0;
 } /* lubksb() */
 
-int invm (const double *a, int N, double *y) {
+
+int invm (const double *a, int N, double *y)
+{
      /* Inverse of a real matrix a[0..N-1][0..N-1].
 	Input:
 		a[0..N-1][0..N-1] - given matrix (saved on exit)
@@ -458,9 +468,10 @@ int invm (const double *a, int N, double *y) {
   return 0;
 } /* invm() */
 
-double det (const double *a, int N) {
-  /* determinant of a real matrix a[0..N-1][0..N-1] */
 
+double det (const double *a, int N)
+{
+  /* determinant of a real matrix a[0..N-1][0..N-1] */
   double d, *al;
   int j, *indx;
 
@@ -476,16 +487,15 @@ double det (const double *a, int N) {
   return d;
 } /* det() */
 
-int compared2c(const void *a, const void *b) {
 
+int compared2c(const void *a, const void *b)
+{
   double* da = (double*)a;
   double* db = (double*)b;
   
   int diff1 = (da[0] > db[0]) - (da[0] < db[0]);
   if (diff1 != 0) return diff1;
   return (da[1] > db[1]) - (da[1] < db[1]);
-
 }
-
 
 #endif

@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include <math.h>
 #include <stdio.h>
-#include <string.h> 
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -20,24 +20,24 @@
 #include "jobcore.h"
 #include "timer.h"
 
-
 extern volatile sig_atomic_t save_state;
 
 
 // Main searching function (loops inside)
-void search(
-	    Search_settings *sett,
+void search( Search_settings *sett,
 	    Command_line_opts *opts,
 	    Search_range *s_range,
 	    FFTW_plans *plans,
 	    FFTW_arrays *fftw_arr,
 	    Aux_arrays *aux,
-	    int *FNum ) {
+            int *FNum )
+{
+
 
   struct flock lck;
   
-  int pm;               // hemisphere   
-  float mm=0, nn=0;         // sky positions 
+  int pm;               // hemisphere
+  float mm=0, nn=0;     // sky positions
   int sgnlc=0;          // number of candidates
   FLOAT_TYPE *sgnlv;    // array with candidates data
   long totsgnl;         // total number of candidates
@@ -91,11 +91,10 @@ void search(
   
   for (pm=s_range->pst; pm<=s_range->pmr[1]; ++pm) {
 
-    sprintf (outname, "%s/triggers_%03d_%04d_%d_%s.bin", 
+    sprintf (outname, "%s/triggers_%03d_%04d_%d_%s.bin",
 	     opts->outdir, opts->seg, opts->band, pm, opts->si_label);
     // remove existing trigger file if checkpointing is disabled
     if(! opts->checkp_flag) remove(outname);
-
     totsgnl = 0;
     
     /* Two main loops over sky positions */ 
@@ -128,7 +127,6 @@ void search(
 		  perror(outname);
 		  return;
 	     }
-
 #ifdef USE_LOCKING
 	     lck.l_type = F_WRLCK;
 	     lck.l_whence = 0;
@@ -158,7 +156,7 @@ void search(
 //      } // for nn
 //      s_range->nst = s_range->nr[0];
 //    } // for mm
-//    s_range->mst = s_range->mr[0]; 
+//    s_range->mst = s_range->mr[0];
 
     // Write the leftover from the last iteration of the buffer 
     if((fd = open(outname, tmode, S_IRUSR|S_IWUSR|S_IRGRP)) < 0) {
@@ -177,11 +175,9 @@ void search(
     totsgnl += sgnlc;
     printf("\n### Total number of signals in %s = %ld\n\n", outname, totsgnl);
     if (close(fd) < 0) perror ("close()");
-    sgnlc=0; 
-    
+    sgnlc=0;  
   } // for pm
   
-
   if(opts->checkp_flag) {
     // empty state file to prevent restart after successful end
     status = ftruncate(fileno(state), 0);
@@ -194,17 +190,17 @@ void search(
 #ifdef TIMERS
   tend = get_current_time(CLOCK_REALTIME);
   double time_elapsed = get_time_difference(tstart, tend);
-  printf("\nwalltime = %e s | ncpus = %d | cputime = %e\n", time_elapsed, omp_get_max_threads(), time_elapsed*omp_get_max_threads());
+     printf("\nwalltime = %e s | ncpus = %d | cputime = %e\n",
+          time_elapsed, omp_get_max_threads(), time_elapsed*omp_get_max_threads());
 #endif
-
   printf("\nEND\n");
 
-}
+} //search
 
 
   /* Main job */ 
 
-int job_core(int pm,             // Hemisphere
+int job_core(int pm,                   // Hemisphere
 	     float mm,                 // Grid 'sky position'
 	     float nn,                 // Second grid 'sky position'
 	     Search_settings *sett,    // Search settings
@@ -215,13 +211,12 @@ int job_core(int pm,             // Hemisphere
 	     Aux_arrays *aux,          // Auxiliary arrays
 	     int *sgnlc,               // Candidate trigger parameters 
 	     FLOAT_TYPE *sgnlv,        // Candidate array 
-	     int *FNum) {              // Candidate signal number
-
+               int *FNum)                // Candidate signal number
+{
   int i, j, n;
   int ii_inj; 
   int smin = s_range->sst, smax = s_range->spndr[1];
-  double al1, al2, sinalt, cosalt, sindelt, cosdelt, 
-    nSource[3], ft, het0;
+  double al1, al2, sinalt, cosalt, sindelt, cosdelt, nSource[3], ft, het0;
   FLOAT_TYPE sgnlt[NPAR], sgnl0;
   FLOAT_TYPE _tmp1[sett->nifo][sett->N] __attribute__((aligned(128)));
 
@@ -229,8 +224,8 @@ int job_core(int pm,             // Hemisphere
   double spindown_timer = 0;
   int spindown_counter  = 0;
   
-
-  /* Matrix	M(.,.) (defined on page 22 of PolGrawCWAllSkyReview1.pdf file)
+     /*
+     Matrix	M(.,.) (defined on page 22 of PolGrawCWAllSkyReview1.pdf file)
      defines the transformation form integers (bin, ss, nn, mm) determining
      a grid point to linear coordinates omega, omegadot, alpha_1, alpha_2),
      where bin is the frequency bin number and alpha_1 and alpha_2 are
@@ -269,13 +264,11 @@ int job_core(int pm,             // Hemisphere
   complex double exph;
 
   // Change linear (grid) coordinates to real coordinates
-  lin2ast(al1/sett->oms, al2/sett->oms, 
-	  pm, sett->sepsm, sett->cepsm,
-	  &sinalt, &cosalt, &sindelt, &cosdelt);
+  lin2ast(al1/sett->oms, al2/sett->oms, pm, sett->sepsm, sett->cepsm,
+  	&sinalt, &cosalt, &sindelt, &cosdelt);
 
   // calculate declination and right ascention
   // written in file as candidate signal sky positions
-
   sgnlt[2] = asin(sindelt);
   sgnlt[3] = fmod(atan2(sinalt, cosalt) + 2.*M_PI, 2.*M_PI);
 
@@ -294,8 +287,7 @@ int job_core(int pm,             // Hemisphere
    * of _detector, ifo[n].sig.aa, ifo[n].sig.bb) 
    */
 
-    modvir(sinalt, cosalt, sindelt, cosdelt,
-           sett->N, &ifo[n], aux);
+    modvir(sinalt, cosalt, sindelt, cosdelt, sett->N, &ifo[n], aux);
 
     // Calculate detector positions with respect to baricenter
     nSource[0] = cosalt*cosdelt;
@@ -344,8 +336,7 @@ int job_core(int pm,             // Hemisphere
       for (i=sett->N; i<sett->nfft; ++i) {
 	   fftw_arr->xa[i] = 0.;
 	   fftw_arr->xb[i] = 0.;
-      }
-      
+      }     
     } //omp parallel
 
 
@@ -382,10 +373,8 @@ int job_core(int pm,             // Hemisphere
     //  struct timeval tstart = get_current_time(), tend;
 
     // Spline interpolation to xDatma, xDatmb arrays
-    splintpad(fftw_arr->xa, ifo[n].sig.shftf, sett->N, 
-	      sett->interpftpad, ifo[n].sig.xDatma);   
-    splintpad(fftw_arr->xb, ifo[n].sig.shftf, sett->N, 
-	      sett->interpftpad, ifo[n].sig.xDatmb);
+    splintpad(fftw_arr->xa, ifo[n].sig.shftf, sett->N, sett->interpftpad, ifo[n].sig.xDatma);
+    splintpad(fftw_arr->xb, ifo[n].sig.shftf, sett->N, sett->interpftpad, ifo[n].sig.xDatmb);
 
 
   } // end of detector loop 
@@ -424,15 +413,12 @@ int job_core(int pm,             // Hemisphere
     
     // swapping smin and smax in case when grid matrix  
     // values are defined with opposite signs than ''usual''
-    if(smin > smax) {
-      
+    if(smin > smax) {    
       smin = smin + smax ;
       smax = smin - smax ;
-      smin = smin - smax ;
-      
+      smin = smin - smax ;     
     }
   }
-
   
   const int s_stride = 1;
   printf ("\n>>%d\t%f\t%f\t[%d..%d:%d]\n", *FNum, mm, nn, smin, smax, s_stride);
@@ -532,7 +518,6 @@ int job_core(int pm,             // Hemisphere
       */
 
       /* stay in (nmin, nmax) range! */
-
 /* #mb
       for(i=sett->nmin+1; i<sett->nmax-dd; i+=dd) {
 	int ii=-1;
@@ -552,7 +537,8 @@ int job_core(int pm,             // Hemisphere
 
   FLOAT_TYPE Fcmax = 0; 
 
-  //#mb for(i=sett->nmin; i<sett->nmax; ++i) {
+  //#mb do not select the whole array, but a subset of freq bins +- gsize_f around the freq_inj
+  // for(i=sett->nmin; i<sett->nmax; ++i) {
   for(i=ii_inj-s_range->gsize_f; i<=ii_inj+s_range->gsize_f; ++i) {
 /*  for(i=ii_inj-2*s_range->gsize_f; i<=ii_inj+2*s_range->gsize_f; i+=dd) {
 	int ii=-1;
@@ -568,7 +554,7 @@ int job_core(int pm,             // Hemisphere
 */
 
     if (F[i] < opts->thr) continue;
-    double Fc;
+    FLOAT_TYPE Fc;
     int ii;
     ii = i;
     Fc = F[i];
@@ -622,7 +608,7 @@ int job_core(int pm,             // Hemisphere
 
   } // for i
 
-//#mb  printf("%f ", Fcmax); 
+  printf("Fcmax: %f ", Fcmax); 
 	
       
 #if TIMERS>2

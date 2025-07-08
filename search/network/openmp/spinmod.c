@@ -14,11 +14,10 @@
 #endif
 
 
-
 void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 			 const FLOAT_TYPE spnd, const FLOAT_TYPE _tmp1[][N],
-			 FFTW_PRE(_complex) *fxa, FFTW_PRE(_complex) *fxb) {
-
+                         FFTW_PRE(_complex) *fxa, FFTW_PRE(_complex) *fxb)
+{
   int i, n;
   
   for(n=0; n<nifo; ++n) {
@@ -44,7 +43,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       int j;
       vect2 v;
       vect a;
-      a = _mm256_setr_ps( het1*(i)   + spnd*_tmp1[n][i],
+               a = _mm256_setr_ps(
+                    het1*(i)   + spnd*_tmp1[n][i],
 			  het1*(i+1) + spnd*_tmp1[n][i+1],
 			  het1*(i+2) + spnd*_tmp1[n][i+2],
 			  het1*(i+3) + spnd*_tmp1[n][i+3],
@@ -56,7 +56,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       v = v_sincos(a);
       // exph = _c[j] - I*_p[j];
       // fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-      vect mare = _mm256_setr_ps( creal(ifo[n].sig.xDatma[i]),
+               vect mare = _mm256_setr_ps(
+                    creal(ifo[n].sig.xDatma[i]),
 				  creal(ifo[n].sig.xDatma[i+1]),
 				  creal(ifo[n].sig.xDatma[i+2]),
 				  creal(ifo[n].sig.xDatma[i+3]),
@@ -65,7 +66,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 				  creal(ifo[n].sig.xDatma[i+6]),
 				  creal(ifo[n].sig.xDatma[i+7])
 				  );
-      vect maim = _mm256_setr_ps( cimag(ifo[n].sig.xDatma[i]),
+               vect maim = _mm256_setr_ps(
+                    cimag(ifo[n].sig.xDatma[i]),
 				  cimag(ifo[n].sig.xDatma[i+1]),
 				  cimag(ifo[n].sig.xDatma[i+2]),
 				  cimag(ifo[n].sig.xDatma[i+3]),
@@ -86,7 +88,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 	for(j=0; j<VLEN; ++j)
 	  fxa[i+j] += ((float *)&vre)[j] + I*((float *)&vim)[j];
       
-      mare = _mm256_setr_ps( creal(ifo[n].sig.xDatmb[i]),
+               mare = _mm256_setr_ps(
+                    creal(ifo[n].sig.xDatmb[i]),
 			     creal(ifo[n].sig.xDatmb[i+1]),
 			     creal(ifo[n].sig.xDatmb[i+2]),
 			     creal(ifo[n].sig.xDatmb[i+3]),
@@ -95,7 +98,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 			     creal(ifo[n].sig.xDatmb[i+6]),
 			     creal(ifo[n].sig.xDatmb[i+7])
 			     );
-      maim = _mm256_setr_ps( cimag(ifo[n].sig.xDatmb[i]),
+               maim = _mm256_setr_ps(
+                    cimag(ifo[n].sig.xDatmb[i]),
 			     cimag(ifo[n].sig.xDatmb[i+1]),
 			     cimag(ifo[n].sig.xDatmb[i+2]),
 			     cimag(ifo[n].sig.xDatmb[i+3]),
@@ -114,7 +118,7 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       else
 	for(j=0; j<VLEN; ++j)
 	  fxb[i+j] += ((float *)&vre)[j] + I*((float *)&vim)[j];
-    } // i
+          } // for(i)
 
 
 #else // COMP_FLOAT
@@ -133,7 +137,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       int j;
       vect2 v;
       vect a;
-      a = _mm256_setr_pd( het1*(i)   + spnd*_tmp1[n][i],
+               a = _mm256_setr_pd(
+                    het1*(i)   + spnd*_tmp1[n][i],
 			  het1*(i+1) + spnd*_tmp1[n][i+1],
 			  het1*(i+2) + spnd*_tmp1[n][i+2],
 			  het1*(i+3) + spnd*_tmp1[n][i+3]
@@ -141,12 +146,14 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       v = v_sincos(a);
       // exph = _c[j] - I*_p[j];
       // fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-      vect mare = _mm256_setr_pd( creal(ifo[n].sig.xDatma[i]),
+               vect mare = _mm256_setr_pd(
+                    creal(ifo[n].sig.xDatma[i]),
 				  creal(ifo[n].sig.xDatma[i+1]),
 				  creal(ifo[n].sig.xDatma[i+2]),
 				  creal(ifo[n].sig.xDatma[i+3])
 				  );
-      vect maim = _mm256_setr_pd( cimag(ifo[n].sig.xDatma[i]),
+               vect maim = _mm256_setr_pd(
+                    cimag(ifo[n].sig.xDatma[i]),
 				  cimag(ifo[n].sig.xDatma[i+1]),
 				  cimag(ifo[n].sig.xDatma[i+2]),
 				  cimag(ifo[n].sig.xDatma[i+3])
@@ -163,12 +170,14 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 	for(j=0; j<VLEN; ++j)
 	  fxa[i+j] += ((double *)&vre)[j] + I*((double *)&vim)[j];
       
-      mare = _mm256_setr_pd( creal(ifo[n].sig.xDatmb[i]),
+               mare = _mm256_setr_pd(
+                    creal(ifo[n].sig.xDatmb[i]),
 			     creal(ifo[n].sig.xDatmb[i+1]),
 			     creal(ifo[n].sig.xDatmb[i+2]),
 			     creal(ifo[n].sig.xDatmb[i+3])
 			     );
-      maim = _mm256_setr_pd( cimag(ifo[n].sig.xDatmb[i]),
+               maim = _mm256_setr_pd(
+                    cimag(ifo[n].sig.xDatmb[i]),
 			     cimag(ifo[n].sig.xDatmb[i+1]),
 			     cimag(ifo[n].sig.xDatmb[i+2]),
 			     cimag(ifo[n].sig.xDatmb[i+3])
@@ -189,7 +198,6 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 
 #elif defined(USE_AVX512)
 
-
 #if defined(COMP_FLOAT)
     /******************************************************/
     /*       SINGLE PRECISION AVX512 version              */
@@ -206,7 +214,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       int j;
       vect2 v;
       vect a;
-      a = _mm512_setr_ps( het1*(i)    + spnd*_tmp1[n][i],
+               a = _mm512_setr_ps(
+                    het1*(i)    + spnd*_tmp1[n][i],
 			  het1*(i+1)  + spnd*_tmp1[n][i+1],
 			  het1*(i+2)  + spnd*_tmp1[n][i+2],
 			  het1*(i+3)  + spnd*_tmp1[n][i+3],
@@ -226,7 +235,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       v = v_sincos(a);
       // exph = _c[j] - I*_p[j];
       // fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-      vect mare = _mm512_setr_ps( creal(ifo[n].sig.xDatma[i]),
+               vect mare = _mm512_setr_ps(
+                    creal(ifo[n].sig.xDatma[i]),
 				  creal(ifo[n].sig.xDatma[i+1]),
 				  creal(ifo[n].sig.xDatma[i+2]),
 				  creal(ifo[n].sig.xDatma[i+3]),
@@ -243,7 +253,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 				  creal(ifo[n].sig.xDatma[i+14]),
 				  creal(ifo[n].sig.xDatma[i+15])
 				  );
-      vect maim = _mm512_setr_ps( cimag(ifo[n].sig.xDatma[i]),
+               vect maim = _mm512_setr_ps(
+                    cimag(ifo[n].sig.xDatma[i]),
 				  cimag(ifo[n].sig.xDatma[i+1]),
 				  cimag(ifo[n].sig.xDatma[i+2]),
 				  cimag(ifo[n].sig.xDatma[i+3]),
@@ -272,7 +283,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 	for(j=0; j<VLEN; ++j)
 	  fxa[i+j] += ((float *)&vre)[j] + I*((float *)&vim)[j];
       
-      mare = _mm512_setr_ps( creal(ifo[n].sig.xDatmb[i]),
+               mare = _mm512_setr_ps(
+                    creal(ifo[n].sig.xDatmb[i]),
 			     creal(ifo[n].sig.xDatmb[i+1]),
 			     creal(ifo[n].sig.xDatmb[i+2]),
 			     creal(ifo[n].sig.xDatmb[i+3]),
@@ -289,7 +301,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 			     creal(ifo[n].sig.xDatmb[i+14]),
 			     creal(ifo[n].sig.xDatmb[i+15])
 			     );
-      maim = _mm512_setr_ps( cimag(ifo[n].sig.xDatmb[i]),
+               maim = _mm512_setr_ps(
+                    cimag(ifo[n].sig.xDatmb[i]),
 			     cimag(ifo[n].sig.xDatmb[i+1]),
 			     cimag(ifo[n].sig.xDatmb[i+2]),
 			     cimag(ifo[n].sig.xDatmb[i+3]),
@@ -335,7 +348,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       int j;
       vect2 v;
       vect a;
-      a = _mm512_setr_pd( het1*(i)   + spnd*_tmp1[n][i],
+               a = _mm512_setr_pd(
+                    het1*(i)   + spnd*_tmp1[n][i],
 			  het1*(i+1) + spnd*_tmp1[n][i+1],
 			  het1*(i+2) + spnd*_tmp1[n][i+2],
 			  het1*(i+3) + spnd*_tmp1[n][i+3],
@@ -347,7 +361,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       v = v_sincos(a);
       // exph = _c[j] - I*_p[j];
       // fxa[i+j] = ifo[0].sig.xDatma[i+j]*exph;
-      vect mare = _mm512_setr_pd( creal(ifo[n].sig.xDatma[i]),
+               vect mare = _mm512_setr_pd(
+                    creal(ifo[n].sig.xDatma[i]),
 				  creal(ifo[n].sig.xDatma[i+1]),
 				  creal(ifo[n].sig.xDatma[i+2]),
 				  creal(ifo[n].sig.xDatma[i+3]),
@@ -356,7 +371,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 				  creal(ifo[n].sig.xDatma[i+6]),
 				  creal(ifo[n].sig.xDatma[i+7])
 				  );
-      vect maim = _mm512_setr_pd( cimag(ifo[n].sig.xDatma[i]),
+               vect maim = _mm512_setr_pd(
+                    cimag(ifo[n].sig.xDatma[i]),
 				  cimag(ifo[n].sig.xDatma[i+1]),
 				  cimag(ifo[n].sig.xDatma[i+2]),
 				  cimag(ifo[n].sig.xDatma[i+3]),
@@ -377,7 +393,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 	for(j=0; j<VLEN; ++j)
 	  fxa[i+j] += ((double *)&vre)[j] + I*((double *)&vim)[j];
       
-      mare = _mm512_setr_pd( creal(ifo[n].sig.xDatmb[i]),
+               mare = _mm512_setr_pd(
+                    creal(ifo[n].sig.xDatmb[i]),
 			     creal(ifo[n].sig.xDatmb[i+1]),
 			     creal(ifo[n].sig.xDatmb[i+2]),
 			     creal(ifo[n].sig.xDatmb[i+3]),
@@ -386,7 +403,8 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
 			     creal(ifo[n].sig.xDatmb[i+6]),
 			     creal(ifo[n].sig.xDatmb[i+7])
 			     );
-      maim = _mm512_setr_pd( cimag(ifo[n].sig.xDatmb[i]),
+               maim = _mm512_setr_pd(
+                    cimag(ifo[n].sig.xDatmb[i]),
 			     cimag(ifo[n].sig.xDatmb[i+1]),
 			     cimag(ifo[n].sig.xDatmb[i+2]),
 			     cimag(ifo[n].sig.xDatmb[i+3]),
@@ -428,6 +446,7 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
       complex double exph;
       vect2 v;
       vect a;
+
       for(j=0; j<VLEN; ++j)
         _p[j] =  het1*(i+j) + spnd*_tmp1[n][i+j];
       a = vload_vd_p(_p);
@@ -515,4 +534,3 @@ void spindown_modulation(const int nifo, const int N, const FLOAT_TYPE het1,
   } // n
   
 } // spindown_modulation
-

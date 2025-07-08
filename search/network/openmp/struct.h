@@ -13,24 +13,18 @@
 #define MAXL 8192              // Max number of veto lines in band
 #define MAXVFILEL 8192         // Max number of text lines in the veto file
 
-// Command line option struct for search 
+/* Command line options for search */
 typedef struct _comm_line_opts {
   
-  int checkp_flag,		// checkpointing flag
-      veto_flag,                // veto lines flag (apply veto lines)
-      gen_vlines_flag,          // (re)generate .vlines files and exit
-      help_flag;
-  
+     int checkp_flag, veto_flag, gen_vlines_flag, help_flag;
   int fftinterp;
   int seg, band, hemi, nod;
   double thr;
   double fpo_val, narrowdown, overlap;
-  
-  const char *indir, *outdir, *range_file, *dump_range_file,
+     const char *indir, *outdir, *range_file, *grid_file, *dump_range_file,
              *usedet, *addsig, *fstat_norm, *label; 
 
-  //#mb To label triggers' files for the software injections
-  // label sigXXX 
+  //#mb To label triggers' files for the software injections, e.g. label sigXXX 
   char si_label[16];
 
   char state_file[FNAME_LENGTH];
@@ -43,11 +37,10 @@ typedef struct _comm_line_opts {
 } Command_line_opts;
 
 
-// input signal arrays
+/* input signal arrays */
 typedef struct _signals {
 	
-  double *xDat;
-  double *xDatorig; 
+  float *xDat, *xDatorig;
   double *DetSSB;       // Ephemeris of the detector
   double *aa, *bb;      // Amplitude modulation functions
   double *shftf, *shft; // Resampling and time-shifting
@@ -62,12 +55,12 @@ typedef struct _signals {
          sig2; 	  // variance of signal
 
   int Nzeros;
-  complex double *xDatma, *xDatmb;
+     double complex *xDatma, *xDatmb;
 
 } Signals;
 
 
-//fftw arrays
+/* fftw arrays */
 typedef struct _fftw_arrays {
 
   fftw_complex *xa, *xb;
@@ -78,7 +71,6 @@ typedef struct _fftw_arrays {
 
 
   /* Search range  */ 
-
 typedef struct _search_range {
   float pmr[2], mr[2], nr[2], spndr[2], fr[2];
   
@@ -93,19 +85,16 @@ typedef struct _search_range {
 
 
   /* FFTW plans  */ 
-
 typedef struct _fftw_plans {
+
   fftw_plan pl_int,  // interpolation forward
             pl_inv;  // interpolation backward
   FFTW_PRE(_plan) plan;
-  /*  fftw_plan plan2,   // main plan
-            pl_int2, // interpolation forward
-            pl_inv2; // interpolation backward */
+
 } FFTW_plans;
 
 
   /* Auxiluary arrays */ 
-
 typedef struct _aux_arrays {
 
   double *sinmodf, *cosmodf; // Earth position
@@ -114,9 +103,7 @@ typedef struct _aux_arrays {
 } Aux_arrays;
 
 
-  /* Search settings 
-   */ 
-
+/* Search settings */
 typedef struct _search_settings {
 
   double fpo,    // Band frequency
@@ -147,7 +134,6 @@ typedef struct _search_settings {
   
   double *M;      // Grid-generating matrix (or Fisher matrix, 
                   // in case of coincidences) 
-    //double *invM;   // Inverse of M
   double invM[4][4];   // Inverse of M
 
   double vedva[4][4];   // transformation matrix: its columns are 
@@ -161,17 +147,15 @@ typedef struct _search_settings {
 } Search_settings;
 
 
-  /* Amplitude modulation function coefficients
-   */ 
-
+/* Amplitude modulation function coefficients */
 typedef struct _ampl_mod_coeff {
+
 	double c1, c2, c3, c4, c5, c6, c7, c8, c9;
+
 } Ampl_mod_coeff;
 
 
-  /* Detector and its data related settings 
-   */ 
-
+/* Detector and its data related settings */
 typedef struct _detector { 
 
     char xdatname[FNAME_LENGTH]; 
@@ -187,13 +171,10 @@ typedef struct _detector {
 
 } Detector_settings; 
 
-  /* Global array of detectors (network) 
-   */ 
-
+/* Global array of detectors (network) */
 extern Detector_settings ifo[MAX_DETECTORS];
 
-
-// Command line option struct for coincidences 
+/* Command line option struct for coincidences */
 typedef struct _comm_line_opts_coinc {
   
      int help_flag; 
@@ -214,6 +195,7 @@ typedef struct _comm_line_opts_coinc {
      char prefix[512], refgrid[1024], *wd, infile[512];
      
 } Command_line_opts_coinc;
+
 
 typedef struct _triggers { 
 

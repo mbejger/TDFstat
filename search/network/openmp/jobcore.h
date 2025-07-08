@@ -11,8 +11,7 @@ void search(
 	    FFTW_plans *plans,
 	    FFTW_arrays *fftw_arr,
 	    Aux_arrays *aux,
-	    int *Fnum
-	    );
+            int *Fnum);
 
 /* Main job function
  * The output is stored in single or double precision 
@@ -41,7 +40,6 @@ void spindown_modulation(
 			 const FLOAT_TYPE spnd,
 			 const FLOAT_TYPE _tmp1[][N],     
 			 FFTW_PRE(_complex) *fxa,
-			 FFTW_PRE(_complex) *fxb 
-			 );
+                         FFTW_PRE(_complex) *fxb );
 
 #endif

@@ -10,13 +10,13 @@
 #include "struct.h"
 #include "settings.h"
 
-Detector_settings ifo[MAX_DETECTORS]; 
-
 static int help_flag=0;
 
 double get_rand() ;
+Detector_settings ifo[MAX_DETECTORS];
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   
   int i, numl=0, freq_line_check, c, pm, gsize_f=32, gsize_s=16, gsize_m=0, gsize_n=0, band=0, reffr, nfrinband; 
   char filename[512], dtaprefix[512], *wd=NULL ; 
@@ -172,7 +172,6 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE); 
   } 
   
-
   if (wd) {
     printf ("Changing working directory to %s\n", wd);
     if (chdir(wd)) {
@@ -253,7 +252,6 @@ int main(int argc, char *argv[]) {
   // Uniform sphere sampling algorithm 
   double x1, x2, X, Y, Z; 
   do {
-
       x1 = 2*get_rand() - 1;
       x2 = 2*get_rand() - 1;
 
@@ -266,6 +264,7 @@ int main(int argc, char *argv[]) {
   // Sky position: declination
   sgnlo[2] = M_PI_2 - acos(Z); 
 
+  //#mb if declination too close to the equator - for TESTS!
   if(fabs(sgnlo[2]) < 1.e-01) sgnlo[2] = 1.e-01; 
 
   // Right ascension
@@ -296,7 +295,7 @@ int main(int argc, char *argv[]) {
 	 sgnlo[0], sgnlo[1], sgnlo[2], sgnlo[3], 
    ph_o, psik, iota); 
   
-  return 0;
+  return(EXIT_SUCCESS);
 
 } // sigen()
 

@@ -34,7 +34,7 @@ void splintpad (complex double *, double *, int, int, complex double*);
 void linterp (complex double *, double *, int, int, complex double*);
 void triginterp (complex double *ya, complex double *yb, double *shftf,
 		 int N, int nfft, complex double *outa, complex double *outb);
-double var (double *, int);
+double var (float *, int);
 
 void gridr (double *, float *, float *, float *, double, double);
 double FStat (FLOAT_TYPE *, int, int, int);
