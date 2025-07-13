@@ -498,8 +498,8 @@ void add_signal_drsearch(
 //#mb 
 //      if(ifo[n].sig.xDat[i]) {  
         //ifo[n].sig.xDat[i] = ifo[n].sig.xDatorig[i] + h0*signadd[n][i];
-        ifo[n].sig.xDat[i] += h0*signadd[n][i];
-        //ifo[n].sig.xDat[i] = h0*signadd[n][i];
+        //ifo[n].sig.xDat[i] += h0*signadd[n][i];
+        ifo[n].sig.xDat[i] = h0*signadd[n][i];
 //      } 
     } // data loop
   } // detector loop
