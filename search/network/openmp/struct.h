@@ -27,12 +27,12 @@ typedef struct _comm_line_opts {
   //#mb To label triggers' files for the software injections, e.g. label sigXXX 
   char si_label[16];
 
-  char state_file[FNAME_LENGTH];
-
   // directed search options
   const char *ra, *dec; 
   double ra_val, dec_val; // Right ascension and declination in radians 
-  int is_directed; 
+  int is_directed;
+
+  char state_file[FNAME_LENGTH];
  
 } Command_line_opts;
 

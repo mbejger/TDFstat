@@ -37,15 +37,18 @@ void search_settings(Search_settings* sett)
   Smax = 2.*M_PI*(sett->fpo + B)*dt*dt/(2.*Smin);   
   */
 
+  //#mb fdotmin, fdotmax ranges here to be adjusted 
+  // for the astrophysical scenario 
+  // 
   // spindown range of NS
   // we assume minimum NS age 1000 yr
   double fdotmin, fdotmax;
   if (sett->fpo < 200.) {
-      fdotmin = 4.*(sett->fpo+B)/(2.*1000.*C_YEARSEC);
+      fdotmin = (sett->fpo+B)/(2.*1000.*C_YEARSEC);
       fdotmax = 0.;
   } else {
-      fdotmin = 1e-10;
-      fdotmax = 1e-11;
+      fdotmin = 1e-9;
+      fdotmax = 1e-9;
   }
 
   // dimensionless spindown range
@@ -270,7 +273,8 @@ void modvir(double sinal, double cosal, double sindel, double cosdel,
 
   // Modulation factors aa, bb for every NON-ZERO data point
   for (t=0; t<Np; t++) {
-      if ( fabs(ifo->sig.xDat[t]) > DBL_MIN ) {
+//#mb assuming no holes in the data 
+//      if ( fabs(ifo->sig.xDat[t]) > DBL_MIN ) {
 	  c = cosalfr*aux->cosmodf[t] + sinalfr*aux->sinmodf[t];
 	  s = sinalfr*aux->cosmodf[t] - cosalfr*aux->sinmodf[t];
 	  c2s = 2.*sqr(c);
@@ -281,10 +285,10 @@ void modvir(double sinal, double cosal, double sindel, double cosdel,
 
 	  ifo->sig.bb[t] = c6*sindel*c2s + c7*sindel*2.*cs + 
 	      c8*cosdel*c + c9*cosdel*s - c6*sindel;
-      } else {
-	  ifo->sig.aa[t] = 0.;
-	  ifo->sig.bb[t] = 0.;
-      }
+//#mb      } else {
+//	  ifo->sig.aa[t] = 0.;
+//	  ifo->sig.bb[t] = 0.;
+//      }
   } 
 } // modvir
 

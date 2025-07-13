@@ -44,13 +44,13 @@ int main (int argc, char* argv[])
 
   printf("Code version : " CVSTR "\n");
   if (signal(SIGUSR1, sig_handler) != SIG_ERR &&
-      signal(SIGTERM, sig_handler) != SIG_ERR )
+         signal(SIGTERM, sig_handler) != SIG_ERR ){
     printf("State saved on SIGTERM or SIGUSR1\n");    
-
+     }
   // Command line options 
   read_ini_file(&sett, &opts, argc, argv);    
 
-  // Directed search check 
+  // Check if search is directed directed 
   if (strlen(opts.ra) > 0 && strlen(opts.dec) > 0) {
     opts.is_directed = 1; 
 

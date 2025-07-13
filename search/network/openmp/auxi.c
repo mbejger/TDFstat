@@ -14,7 +14,7 @@
 
 
 // lin2ast described in Phys. Rev. D 82, 022005 (2010) (arXiv:1003.0844)
-void lin2ast (double be1, double be2, int pm, double sepsm, double cepsm, 
+void lin2ast (double be1, double be2, int pm, double sepsm, double cepsm,
               double *sinal, double *cosal, double *sindel, double *cosdel)
 {
   *sindel = be1*sepsm-(2*pm-3)*sqrt(1.-sqr(be1)-sqr(be2))*cepsm;
@@ -35,8 +35,8 @@ int ast2lin (double alfa, double delta, double epsm, double *be)
     be[0] = cos(epsm)*sin(alfa)*cos(delta)+sin(epsm)*sin(delta);
     be[1] = cos(alfa)*cos(delta);
 
-    //#mb this is not needed at the moment 
- 
+    //#mb this is not needed at the moment
+
     double d1 = asin(be[0]*sin(epsm) 
             + sqrt(1. - be[0]*be[0] - be[1]*be[1])*cos(epsm)) - delta;
 
@@ -49,7 +49,7 @@ int ast2lin (double alfa, double delta, double epsm, double *be)
     else
         pm = 2;
 
-    return pm; 
+    return pm;
 } /* ast2lin */
 
 
@@ -225,8 +225,8 @@ double var (float *x, int n)
 
 
 
-void gridr (double *M, float *spndr, float *nr, float *mr, double oms, double Smax) {
-
+void gridr (double *M, float *spndr, float *nr, float *mr, double oms, double Smax)
+{
   double cof, Mp[16], smx[64], d, Ob;
   int i, j, indx[4];
 

@@ -12,6 +12,7 @@ PREC = FLOAT
 
 FFTW_DIR = /opt/fftw/3.3.10-gcc9-mvapich2.2
 #FFTW_DIR = $(CONDA_PREFIX)
+#FFTW_DIR = /opt/fftw/3.3.10-gcc11-mvapich2/
 
 INIPARSER_DIR = ../../../utils/iniparser
 
@@ -50,9 +51,7 @@ CC = gcc -std=gnu11 -static-libgcc -fopenmp #-flto
 CFLAGS = -DPREFIX="./candidates" -DCODEVER=$(VER) -DTIMERS=3 -D$(SINCOS) -UUSE_LOCKING  -DCOMP_${PREC} ${VCFLAGS} #-DVERBOSE 
 CFLAGS += -I$(FFTW_DIR)/include -I$(INIPARSER_DIR)/src
 CFLAGS += -g -Wall -Wno-unused \
-	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops -march=x86-64 -mtune=generic # \
-	  -march=$(ARCH) -mtune=$(ARCH)
-
+	  -O3 -ffast-math  -funsafe-loop-optimizations -funroll-loops -march=x86-64 -mtune=generic #-march=$(ARCH) -mtune=$(ARCH)
 
 LDFLAGS = -L$(FFTW_DIR)/lib ${VLDFLAGS} -L$(INIPARSER_DIR)
 LDLIBS = -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 \
@@ -77,7 +76,7 @@ $(TARGET): $(DEPS)
 	$(CC) $(LDFLAGS) -o $@ $(SRC) $(CFLAGS) $(LDLIBS)
 
 clean:
-	rm -f *.o 
+	rm -f *.o
 
 uninstall: clean
 	rm -f $(TARGET)
@@ -86,5 +85,5 @@ uninstall: clean
 
 #----------------------------------------------
 
-sigen: sigen.o auxi.o settings.o  
+sigen: sigen.o auxi.o settings.o
 	$(CC) -o $@ $^ -Wl,-Bdynamic -lc -lrt -lm

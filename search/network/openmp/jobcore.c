@@ -73,7 +73,7 @@ void search( Search_settings *sett,
     s_range->pst = ast2lin(opts->ra_val, opts->dec_val, C_EPSMA, be); 
     s_range->pmr[1] = s_range->pst; 
 
-    //be = al/sett->oms;
+    // be = al/sett->oms
 
     double D, al1, al2;
     al1 = be[0]*sett->oms;
@@ -92,13 +92,14 @@ void search( Search_settings *sett,
   for (pm=s_range->pst; pm<=s_range->pmr[1]; ++pm) {
 
     sprintf (outname, "%s/triggers_%03d_%04d_%d_%s.bin",
-	     opts->outdir, opts->seg, opts->band, pm, opts->si_label);
+         opts->outdir, opts->seg, opts->band, pm, opts->si_label);
     // remove existing trigger file if checkpointing is disabled
     if(! opts->checkp_flag) remove(outname);
     totsgnl = 0;
     
     /* Two main loops over sky positions */ 
-   
+
+//#mb directed search - no need for sky loop   
 //    for (mm=s_range->mst; mm<=s_range->mr[1]; ++mm) {	
 //      for (nn=s_range->nst; nn<=s_range->nr[1]; ++nn) {	
 
@@ -149,10 +150,9 @@ void search( Search_settings *sett,
 		 exit(EXIT_SUCCESS);
 	       }
 	     }
-	     save_state = 0;
-	     
+	     save_state = 0;	     
 	} /* if sgnlc > sett-nfft */
-
+//#mb directed search 
 //      } // for nn
 //      s_range->nst = s_range->nr[0];
 //    } // for mm
@@ -254,10 +254,7 @@ int job_core(int pm,                   // Hemisphere
 
   // check if the search is in an appropriate region of the grid
   // if not, returns NULL
-  if ((sqr(al1)+sqr(al2))/sqr(sett->oms) > 1.) {
-    printf("Outside the sky. Exiting...\n"); 
-    return 0;
-  } 
+  if ((sqr(al1)+sqr(al2))/sqr(sett->oms) > 1.) { printf("Outside the sky. Exiting...\n"); return 0; }
 
   int ss;
   double shft1, phase, cp, sp;
@@ -272,8 +269,7 @@ int job_core(int pm,                   // Hemisphere
   sgnlt[2] = asin(sindelt);
   sgnlt[3] = fmod(atan2(sinalt, cosalt) + 2.*M_PI, 2.*M_PI);
 
-  printf("Dec and Ra from inside the jobcore: %lf %lf\n", sgnlt[2], sgnlt[3]);  
-
+  printf("Dec and Ra from inside the jobcore: %lf %lf\n", sgnlt[2], sgnlt[3]); 
   het0 = fmod(nn*sett->M[8] + mm*sett->M[12], sett->M[0]);
 
   // Nyquist frequency 
@@ -439,6 +435,9 @@ int job_core(int pm,                   // Hemisphere
     
     /* Spindown loop  */
 
+  //#mb spindown conversion factor to Hz/s 
+  float spindown_conv = M_PI*sett->dt*sett->dt; 
+
   for(ss=smin; ss<=smax; ss += s_stride) {
 
 #if TIMERS>2
@@ -449,6 +448,7 @@ int job_core(int pm,                   // Hemisphere
       // Spindown parameter
       //FLOAT_TYPE spnd = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
       sgnlt[1] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
+      sgnlt[1] /= spindown_conv; // convert to Hz/s 
 
       FLOAT_TYPE het1;
       
@@ -510,7 +510,7 @@ int job_core(int pm,                   // Hemisphere
       }
 
       /* select triggers */
-
+#if 0
       int dd = sett->dd;
       /* find the highest maximum (above trl) in each block of length dd;
 	 dd is set to (1/day frequency in units of F indices)-1,
@@ -518,7 +518,6 @@ int job_core(int pm,                   // Hemisphere
       */
 
       /* stay in (nmin, nmax) range! */
-/* #mb
       for(i=sett->nmin+1; i<sett->nmax-dd; i+=dd) {
 	int ii=-1;
 	FLOAT_TYPE Fc = opts->thr;
@@ -530,38 +529,26 @@ int job_core(int pm,                   // Hemisphere
 	}
 	
 	if ( ii < 0 ) continue; // no maximum in this block
-*/ 
-
+#else
   //#mb Injection frequency in terms of FFT bins ii 
-  ii_inj = (int)((s_range->freq_inj - sgnl0)*((FLOAT_TYPE)sett->nfftf / (2*M_PI)));  
-
-  FLOAT_TYPE Fcmax = 0; 
+  ii_inj = (int)((s_range->freq_inj - sgnl0)*((FLOAT_TYPE)sett->nfftf / (2*M_PI)));   
 
   //#mb do not select the whole array, but a subset of freq bins +- gsize_f around the freq_inj
   // for(i=sett->nmin; i<sett->nmax; ++i) {
   for(i=ii_inj-s_range->gsize_f; i<=ii_inj+s_range->gsize_f; ++i) {
-/*  for(i=ii_inj-2*s_range->gsize_f; i<=ii_inj+2*s_range->gsize_f; i+=dd) {
-	int ii=-1;
-	FLOAT_TYPE Fc = opts->thr;
-	for (j=i; j<i+dd; ++j) {
-	  if (F[j] < Fc || F[j-1] > F[j] || F[j] < F[j+1] ) continue;
-	  ii = j;
-	  Fc = F[j];
-	  j++;
-	}
-	
-	if ( ii < 0 ) continue; // no maximum in this block
-*/
-
     if (F[i] < opts->thr) continue;
     FLOAT_TYPE Fc;
-    int ii;
-    ii = i;
+    int ii = i;
     Fc = F[i];
-
-    if(Fc > Fcmax) 
-      Fcmax = Fc; 
-
+/* //#mb selecting all the points, not only local maxima 
+               while (++i < sett->nmax && F[i] > opts->thr) {
+                    if(F[i] > Fc) {
+                         ii = i;
+                         Fc = F[i];
+                    } // if F[i]
+               } // while i
+*/
+#endif
     // Candidate signal frequency
     sgnlt[0] = (FLOAT_TYPE)(2*ii)/(FLOAT_TYPE)sett->nfftf * M_PI + sgnl0;
       
@@ -581,17 +568,16 @@ int job_core(int pm,                   // Hemisphere
         exit(EXIT_FAILURE);
       }
 
-      /*
+      
       //#mb: output to triggers file in the form of ''grid'' values
+      /*
       sgnlt[2] = sgnlt[0];
-      sgnlt[3] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13];
-      */ 
+      sgnlt[3] = ss*sett->M[5] + nn*sett->M[9] + mm*sett->M[13]; 
       sgnlt[0] = ii - ii_inj;
       sgnlt[1] = ss - (s_range->spndr[1]);
+      */ 
 
-      // SNR ; sqrtf precission is sufficient
-      // sgnlt[4] = sqrtf(2.*(Fc - sett->nd));
-      //#mb - value of Fc instead of SNR
+      //#mb - value of Fc instead of SNR (previously sgnlt[4] = sqrtf(2.*(Fc - sett->nd)) )
       sgnlt[4] = Fc;
 
       // Add new parameters to the output buffer array
@@ -605,11 +591,8 @@ int job_core(int pm,                   // Hemisphere
         *sgnlc, pm, mm, nn, ss, ii, sgnlt[4]);
 #endif
     }
-
   } // for i
 
-  printf("Fcmax: %f ", Fcmax); 
-	
       
 #if TIMERS>2
       //tend = get_current_time(CLOCK_PROCESS_CPUTIME_ID);
